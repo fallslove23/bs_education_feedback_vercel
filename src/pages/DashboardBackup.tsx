@@ -78,12 +78,7 @@ export default function DashboardBackup() {
     return (
         <DashboardLayout title="데이터 백업" description="주요 데이터를 JSON 형식으로 내보냅니다.">
             <div className="space-y-6 animate-fade-in">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">데이터 백업</h1>
-                    <p className="text-muted-foreground mt-2">
-                        시스템의 주요 데이터를 JSON 형식으로 안전하게 백업(내보내기)할 수 있습니다.
-                    </p>
-                </div>
+                {/* Header content removed to save space on mobile, title is in Layout */}
 
                 <Alert className="bg-blue-50/50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900">
                     <Database className="h-4 w-4 text-blue-600 dark:text-blue-400" />
