@@ -1,0 +1,459 @@
+/* Pretendard 폰트 import */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+
+html, body, #root {
+  min-height: 100%;
+}
+
+body {
+  overflow-y: auto;                 /* 전역 스크롤 허용 */
+  -webkit-overflow-scrolling: touch;/* iOS 부드러운 스크롤 */
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    /* Soft purple gradient theme */
+    --primary: 251 91% 64%;          /* #5b4bff */
+    --primary-variant: 268 85% 73%;  /* #9a7bff */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 250 100% 98%;
+    --secondary-foreground: 251 91% 64%;
+
+    --muted: 250 100% 98%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 250 100% 96%;
+    --accent-foreground: 251 91% 64%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 250 100% 95%;
+    --input: 250 100% 95%;
+    --ring: 251 91% 64%;
+    --surface: 0 0% 100%;
+    --surface-foreground: 222.2 84% 4.9%;
+    --surface-border: 250 100% 95%;
+
+    /* Purple gradient system */
+    --gradient-primary: linear-gradient(135deg, hsl(251 91% 64%) 0%, hsl(268 85% 73%) 100%);
+    --gradient-secondary: linear-gradient(135deg, hsl(250 100% 98%) 0%, hsl(250 100% 96%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(251 91% 64%) 0%, hsl(268 85% 73%) 100%);
+    --gradient-soft: linear-gradient(135deg, hsl(250 100% 99%) 0%, hsl(250 100% 97%) 100%);
+    
+    /* Neumorphic shadows */
+    --shadow-neumorphic: 6px 6px 12px hsl(250 100% 92%), -6px -6px 12px hsl(0 0% 100%);
+    --shadow-neumorphic-inset: inset 3px 3px 6px hsl(250 100% 92%), inset -3px -3px 6px hsl(0 0% 100%);
+    --shadow-neumorphic-soft: 3px 3px 8px hsl(250 100% 94%), -3px -3px 8px hsl(0 0% 100%);
+    --shadow-purple-glow: 0 4px 20px hsl(251 91% 64% / 0.15);
+    
+    /* Glass effects */
+    --glass-bg: 251 91% 64% / 0.05;
+    --glass-border: 251 91% 64% / 0.1;
+
+    /* Chart colors - Premium Purple Palette */
+    --chart-1: 263 85% 65%;         /* Main purple */
+    --chart-2: 270 91% 70%;         /* Light purple */
+    --chart-3: 285 85% 58%;         /* Violet */
+    --chart-4: 252 83% 57%;         /* Blue purple */
+    --chart-5: 295 73% 65%;         /* Pink purple */
+    --chart-success: 142 76% 36%;
+    --chart-warning: 38 92% 50%;
+    --chart-danger: 0 84% 60%;
+    --chart-info: 201 96% 32%;
+    --chart-purple: 263 85% 65%;
+    --chart-purple-light: 270 91% 75%;
+    --chart-purple-dark: 255 70% 55%;
+    --chart-gradient-1: linear-gradient(135deg, hsl(263 85% 65%) 0%, hsl(270 91% 75%) 100%);
+    --chart-gradient-2: linear-gradient(135deg, hsl(285 85% 58%) 0%, hsl(295 73% 65%) 100%);
+    --chart-gradient-3: linear-gradient(135deg, hsl(252 83% 57%) 0%, hsl(263 85% 65%) 100%);
+
+    --radius: 0.5rem;
+
+    /* Sidebar neumorphic theme */
+    --sidebar-background: 250 100% 99%;
+    --sidebar-foreground: 222.2 47% 11%;
+    --sidebar-primary: 251 91% 64%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 250 100% 96%;
+    --sidebar-accent-foreground: 222.2 47% 11%;
+    --sidebar-border: 250 100% 94%;
+    --sidebar-ring: 251 91% 64%;
+    --sidebar-muted: 250 100% 97%;
+    --sidebar-muted-foreground: 222.2 47% 11%;
+  }
+
+  .dark {
+    --background: 220 15% 10%;
+    --foreground: 210 40% 98%;
+
+    --card: 220 15% 13%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 220 15% 13%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Dark mode purple gradient theme */
+    --primary: 251 91% 64%;
+    --primary-variant: 268 85% 73%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 15% 18%;
+    --secondary-foreground: 210 40% 90%;
+
+    --muted: 220 15% 18%;
+    --muted-foreground: 215 20% 70%;
+
+    --accent: 220 15% 20%;
+    --accent-foreground: 210 40% 95%;
+
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 15% 20%;
+    --input: 220 15% 20%;
+    --ring: 251 91% 64%;
+    --surface: 220 15% 12%;
+    --surface-foreground: 210 40% 96%;
+    --surface-border: 220 15% 22%;
+    
+    /* Dark mode gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(251 91% 64%) 0%, hsl(268 85% 73%) 100%);
+    --gradient-secondary: linear-gradient(135deg, hsl(220 15% 15%) 0%, hsl(220 15% 13%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(251 91% 64%) 0%, hsl(268 85% 73%) 100%);
+    --gradient-soft: linear-gradient(135deg, hsl(220 15% 13%) 0%, hsl(220 15% 11%) 100%);
+    
+    /* Dark mode neumorphic shadows */
+    --shadow-neumorphic: 6px 6px 12px hsl(220 20% 6%), -6px -6px 12px hsl(220 15% 16%);
+    --shadow-neumorphic-inset: inset 3px 3px 6px hsl(220 20% 6%), inset -3px -3px 6px hsl(220 15% 16%);
+    --shadow-neumorphic-soft: 3px 3px 8px hsl(220 20% 8%), -3px -3px 8px hsl(220 15% 14%);
+    --shadow-purple-glow: 0 4px 20px hsl(251 91% 64% / 0.3);
+    
+    /* Dark sidebar theme */
+    --sidebar-background: 220 15% 12%;
+    --sidebar-foreground: 210 40% 90%;
+    --sidebar-primary: 251 91% 64%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 15% 18%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 220 15% 20%;
+    --sidebar-ring: 251 91% 64%;
+    --sidebar-muted: 220 15% 16%;
+    --sidebar-muted-foreground: 215 20% 65%;
+  }
+}
+
+/* Mobile-friendly animations and interactions */
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  0% {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  0% {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.4s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.5s ease-out forwards;
+}
+
+/* Touch-friendly interactions */
+.touch-friendly {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Text wrapping utilities for mobile */
+.break-words {
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.hyphens-auto {
+  hyphens: auto;
+}
+
+/* Line clamp utilities */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Mobile viewport fixes */
+@supports (height: 100dvh) {
+  .min-h-screen {
+    min-height: 100dvh;
+  }
+}
+
+/* Safe area support for mobile */
+@supports (padding: max(0px)) {
+  .safe-area-top {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Mobile-first global styles */
+@layer base {
+  * {
+    @apply border-border;
+    /* Prevent text overflow only, not element width */
+    word-wrap: break-word;
+  }
+
+  html {
+    /* Prevent zoom on form inputs on iOS */
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    touch-action: manipulation;
+    height: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    /* Pretendard 폰트 우선 적용 */
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, "Roboto", "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+    /* Prevent horizontal overflow */
+    overflow-x: hidden;
+    /* Enable smooth scrolling */
+    scroll-behavior: smooth;
+    height: 100%;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  #root {
+    height: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Container width constraints for mobile */
+  .container {
+    @apply w-full px-4 mx-auto;
+    max-width: 1200px;
+  }
+
+  /* Mobile-optimized card spacing */
+  .card-mobile {
+    @apply mx-auto max-w-full;
+  }
+
+  /* Text responsiveness */
+  .text-responsive {
+    @apply text-sm md:text-base;
+  }
+
+  /* Mobile table wrapper */
+  .table-mobile {
+    @apply overflow-x-auto -mx-4 px-4;
+  }
+
+  /* Mobile button improvements */
+  .btn-mobile {
+    @apply min-h-[44px] touch-friendly px-4 py-2;
+  }
+
+  /* Mobile scroll optimization */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+  }
+
+  .scrollable-y {
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  .scrollable-x {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  /* Touch optimization */
+  .touch-scroll {
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+    touch-action: manipulation;
+  }
+
+  /* iOS specific fixes */
+  .ios-scroll-fix {
+    -webkit-overflow-scrolling: touch;
+    overflow: auto;
+  }
+  
+  .ios-safe-area {
+    padding-top: constant(safe-area-inset-top);
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: constant(safe-area-inset-bottom);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Additional safe area utilities */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-left {
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .safe-right {
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* 한글 텍스트 최적화 */
+  .font-korean {
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-feature-settings: "kern" 1;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Badge 컴포넌트 한글 폰트 강제 적용 */
+  .badge-korean {
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
+    font-weight: 500;
+    letter-spacing: -0.025em;
+  }
+}
+
+/* Neumorphic design utilities */
+.neumorphic-card {
+  @apply bg-gradient-soft shadow-neumorphic rounded-xl border border-sidebar-border/30;
+}
+
+.neumorphic-button {
+  @apply shadow-neumorphic-soft hover:shadow-neumorphic active:shadow-neumorphic-inset transition-all duration-200;
+}
+
+.purple-pill {
+  @apply bg-gradient-primary text-sidebar-primary-foreground shadow-purple-glow rounded-xl;
+}
+
+/* Mobile-optimized sidebar styles */
+.sidebar-mobile {
+  @apply lg:translate-x-0 lg:static lg:inset-0;
+}
+
+/* Responsive text utilities */
+.text-sidebar-responsive {
+  @apply text-sm lg:text-base;
+}
+
+/* Touch-friendly menu items */
+.menu-item-touch {
+  @apply min-h-[48px] touch-friendly;
+}
+
+/* Enhanced scrolling for sidebar */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--sidebar-border)) transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: hsl(var(--sidebar-border));
+  border-radius: 2px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--sidebar-primary) / 0.3);
+}
+
+/* Fade animation for role switcher */
+.role-switcher-fade {
+  animation: fade-in 0.3s ease-out;
+}

@@ -1,0 +1,61 @@
+{
+  "name": "BS Edu 피드백",
+  "short_name": "BS피드백",
+  "description": "BS/SS 교육과정 교육생 피드백 시스템",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1e40af",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "ko",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/app-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/app-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "설문조사 참여",
+      "short_name": "설문참여",
+      "description": "진행 중인 설문조사에 참여하기",
+      "url": "/",
+      "icons": [
+        {
+          "src": "/app-icon.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "관리자 로그인",
+      "short_name": "관리자",
+      "description": "관리자/강사 대시보드 접근",
+      "url": "/auth",
+      "icons": [
+        {
+          "src": "/app-icon.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/placeholder.svg",
+      "sizes": "640x1136",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ]
+}

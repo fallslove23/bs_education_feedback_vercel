@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Force cache busting for latest version -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    
+    <!-- Preconnect to CDN for faster font loading -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    
+    <!-- Preconnect to Supabase API for faster data loading -->
+    <link rel="preconnect" href="https://zxjiugmqfzqluviuwztr.supabase.co" crossorigin>
+    <link rel="dns-prefetch" href="https://zxjiugmqfzqluviuwztr.supabase.co">
+    
+    <!-- Preload critical assets for faster FCP -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" as="style">
+    <link rel="preload" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/woff2/Pretendard-Regular.woff2" as="font" type="font/woff2" crossorigin>
+    
+    <!-- Preload LCP image for immediate discovery -->
+    <link rel="preload" href="/logo.png" as="image" fetchpriority="high">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="BS피드백" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="/app-icon.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/app-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/app-icon.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/app-icon.png" />
+    
+    <title>BS Edu 피드백</title>
+    <meta name="description" content="BS/SS 교육과정 교육생 피드백 시스템">
+    <meta name="author" content="BS Edu" />
+
+    <meta property="og:title" content="BS Edu 피드백" />
+    <meta property="og:description" content="BS/SS 교육과정 교육생 피드백 시스템" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/logo.png">
+
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <meta name="twitter:image" content="/logo.png">
+    <!-- Critical CSS for immediate FCP -->
+    <style>
+      /* Critical inline styles for loading screen - improves FCP */
+      #root:empty::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: linear-gradient(135deg, hsl(263 70% 50.4%) 0%, hsl(270 91% 65%) 100%);
+        z-index: 9999;
+      }
+      #root:empty::after {
+        content: 'BS 피드백';
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 1.5rem;
+        font-weight: bold;
+        z-index: 10000;
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      .initial-loader {
+        position: fixed;
+        top: calc(50% + 60px);
+        left: 50%;
+        transform: translateX(-50%);
+        width: 32px;
+        height: 32px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        z-index: 10000;
+      }
+      @keyframes spin {
+        to { transform: translateX(-50%) rotate(360deg); }
+      }
+      /* Hide loader when React mounts */
+      #root:not(:empty) + .initial-loader,
+      #root:not(:empty)::before,
+      #root:not(:empty)::after {
+        display: none;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <div class="initial-loader" aria-hidden="true"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Service Worker registration with aggressive update checking
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+            .then((registration) => {
+              console.log('SW registered: ', registration);
+              
+              // Check for updates every time the page loads
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                if (newWorker) {
+                  newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                      console.log('New version available, reloading...');
+                      window.location.reload();
+                    }
+                  });
+                }
+              });
+
+              // Force check for updates (with null check to prevent console errors)
+              if (registration?.update) {
+                registration.update().catch(() => {/* Ignore update errors */});
+              }
+            })
+            .catch((registrationError) => {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+
+        // Listen for messages from service worker
+        navigator.serviceWorker.addEventListener('message', (event) => {
+          if (event.data && event.data.type === 'SKIP_WAITING') {
+            window.location.reload();
+          }
+        });
+      }
+
+      // PWA Install Prompt for iOS and Android
+      let deferredPrompt;
+      
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        // Show install prompt after login
+        const showInstallPrompt = () => {
+          if (deferredPrompt && window.location.pathname.includes('/dashboard')) {
+            const installBanner = document.createElement('div');
+            installBanner.innerHTML = `
+              <div style="position: fixed; top: 0; left: 0; right: 0; background: linear-gradient(135deg, hsl(263 70% 50.4%) 0%, hsl(270 91% 65%) 100%); color: white; padding: 12px 16px; text-align: center; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                <div style="max-width: 400px; margin: 0 auto;">
+                  <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 14px;">🎯 BS 피드백을 홈 화면에 추가하세요!</p>
+                  <p style="margin: 0 0 12px 0; font-size: 12px; opacity: 0.9;">빠른 접속과 더 나은 사용 경험을 위해</p>
+                  <div style="display: flex; gap: 8px; justify-content: center;">
+                    <button id="installApp" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 16px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer;">
+                      설치
+                    </button>
+                    <button id="dismissInstall" style="background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 16px; border-radius: 6px; font-size: 12px; cursor: pointer;">
+                      닫기
+                    </button>
+                  </div>
+                </div>
+              </div>
+            `;
+            
+            document.body.appendChild(installBanner);
+            
+            document.getElementById('installApp').addEventListener('click', () => {
+              deferredPrompt.prompt();
+              deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                  console.log('User accepted the install prompt');
+                }
+                deferredPrompt = null;
+                document.body.removeChild(installBanner);
+              });
+            });
+            
+            document.getElementById('dismissInstall').addEventListener('click', () => {
+              document.body.removeChild(installBanner);
+              localStorage.setItem('installPromptDismissed', Date.now());
+            });
+            
+            // Auto dismiss after 10 seconds
+            setTimeout(() => {
+              if (document.body.contains(installBanner)) {
+                document.body.removeChild(installBanner);
+              }
+            }, 10000);
+          }
+        };
+        
+        // Show prompt after short delay if user is logged in
+        const lastDismissed = localStorage.getItem('installPromptDismissed');
+        const shouldShow = !lastDismissed || (Date.now() - parseInt(lastDismissed) > 24 * 60 * 60 * 1000); // 24 hours
+        
+        if (shouldShow) {
+          setTimeout(showInstallPrompt, 2000);
+        }
+      });
+    </script>
+  </body>
+</html>
