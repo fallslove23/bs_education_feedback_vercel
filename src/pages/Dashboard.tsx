@@ -52,18 +52,18 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user) return;
-      
+
       try {
         const { data, error } = await supabase
           .from('profiles')
           .select('role, instructor_id')
           .eq('id', user.id)
           .maybeSingle();
-          
+
         if (error && error.code !== 'PGRST116') {
           console.error('Error fetching profile:', error);
         }
-        
+
         // 프로필이 없는 경우 기본 프로필 생성
         if (!data) {
           const { data: newProfile, error: insertError } = await supabase
@@ -75,7 +75,7 @@ const Dashboard = () => {
             })
             .select()
             .single();
-            
+
           if (insertError) {
             console.error('Error creating profile:', insertError);
           } else {
@@ -233,7 +233,7 @@ const Dashboard = () => {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AdminSidebar />
-        
+
         <main className="flex-1 flex flex-col">
           {/* Header */}
           <header className="border-b bg-white/95 backdrop-blur-sm sticky top-0 z-40 shadow-sm">
@@ -256,14 +256,14 @@ const Dashboard = () => {
                 <Button onClick={() => navigate('/')} variant="ghost" size="sm">
                   설문 메인
                 </Button>
-                
+
                 <Button variant="ghost" size="sm" className="relative">
                   <Activity className="h-4 w-4" />
                   {stats.recentResponsesCount > 0 && (
                     <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full"></span>
                   )}
                 </Button>
-                
+
                 <Button onClick={signOut} variant="outline" size="sm">로그아웃</Button>
               </div>
             </div>
@@ -273,47 +273,47 @@ const Dashboard = () => {
           <div className="flex-1 container mx-auto px-2 sm:px-4 py-3 sm:py-4 md:py-6">
             {/* 탭 네비게이션 */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-1 border border-gray-200 shadow-sm overflow-x-auto touch-scroll">
-                <TabsList className={`grid ${isAdmin ? 'grid-cols-5' : isInstructor ? 'grid-cols-4' : 'grid-cols-3'} gap-1 bg-transparent h-auto p-0 min-w-max`}>
-                  <TabsTrigger 
-                    value="overview" 
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-1 border border-gray-200 shadow-sm overflow-x-auto touch-scroll no-scrollbar">
+                <TabsList className={`flex sm:grid ${isAdmin ? 'sm:grid-cols-5' : isInstructor ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-1 bg-transparent h-auto p-0 w-max sm:w-full min-w-full`}>
+                  <TabsTrigger
+                    value="overview"
                     className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all duration-200 py-2 sm:py-3 px-3 sm:px-4 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap"
                   >
                     <BarChart className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     개요
                   </TabsTrigger>
-                  
-                  <TabsTrigger 
-                    value="surveys" 
+
+                  <TabsTrigger
+                    value="surveys"
                     className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all duration-200 py-2 sm:py-3 px-3 sm:px-4 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap"
                   >
                     <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     설문관리
                   </TabsTrigger>
-                  
-                  <TabsTrigger 
-                    value="results" 
+
+                  <TabsTrigger
+                    value="results"
                     className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all duration-200 py-2 sm:py-3 px-3 sm:px-4 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap"
                   >
                     <BarChart className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     결과분석
                   </TabsTrigger>
-                  
+
                   {/* 강사관리 탭 - 관리자와 강사 모두 접근 가능 */}
                   {(isAdmin || isInstructor) && (
-                    <TabsTrigger 
-                      value="instructors" 
+                    <TabsTrigger
+                      value="instructors"
                       className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all duration-200 py-2 sm:py-3 px-3 sm:px-4 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap"
                     >
                       <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                       강사관리
                     </TabsTrigger>
                   )}
-                  
+
                   {/* 템플릿관리 탭 - 관리자만 접근 가능 */}
                   {isAdmin && (
-                    <TabsTrigger 
-                      value="templates" 
+                    <TabsTrigger
+                      value="templates"
                       className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all duration-200 py-2 sm:py-3 px-3 sm:px-4 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap"
                     >
                       <BookOpen className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
@@ -467,8 +467,8 @@ const Dashboard = () => {
                       <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mt-3 sm:mt-4">
                         {chartData.map((item, index) => (
                           <div key={item.name} className="flex items-center gap-1.5 sm:gap-2">
-                            <div 
-                              className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" 
+                            <div
+                              className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0"
                               style={{ backgroundColor: COLORS[index] }}
                             />
                             <span className="text-xs sm:text-sm text-muted-foreground">{item.name}</span>

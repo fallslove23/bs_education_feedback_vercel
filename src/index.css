@@ -1,13 +1,17 @@
 /* Pretendard 폰트 import */
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
 
-html, body, #root {
+html,
+body,
+#root {
   min-height: 100%;
 }
 
 body {
-  overflow-y: auto;                 /* 전역 스크롤 허용 */
-  -webkit-overflow-scrolling: touch;/* iOS 부드러운 스크롤 */
+  overflow-y: auto;
+  /* 전역 스크롤 허용 */
+  -webkit-overflow-scrolling: touch;
+  /* iOS 부드러운 스크롤 */
 }
 
 @tailwind base;
@@ -30,8 +34,10 @@ All colors MUST be HSL.
     --popover-foreground: 222.2 84% 4.9%;
 
     /* Soft purple gradient theme */
-    --primary: 251 91% 64%;          /* #5b4bff */
-    --primary-variant: 268 85% 73%;  /* #9a7bff */
+    --primary: 251 91% 64%;
+    /* #5b4bff */
+    --primary-variant: 268 85% 73%;
+    /* #9a7bff */
     --primary-foreground: 0 0% 100%;
 
     --secondary: 250 100% 98%;
@@ -58,23 +64,28 @@ All colors MUST be HSL.
     --gradient-secondary: linear-gradient(135deg, hsl(250 100% 98%) 0%, hsl(250 100% 96%) 100%);
     --gradient-accent: linear-gradient(135deg, hsl(251 91% 64%) 0%, hsl(268 85% 73%) 100%);
     --gradient-soft: linear-gradient(135deg, hsl(250 100% 99%) 0%, hsl(250 100% 97%) 100%);
-    
+
     /* Neumorphic shadows */
     --shadow-neumorphic: 6px 6px 12px hsl(250 100% 92%), -6px -6px 12px hsl(0 0% 100%);
     --shadow-neumorphic-inset: inset 3px 3px 6px hsl(250 100% 92%), inset -3px -3px 6px hsl(0 0% 100%);
     --shadow-neumorphic-soft: 3px 3px 8px hsl(250 100% 94%), -3px -3px 8px hsl(0 0% 100%);
     --shadow-purple-glow: 0 4px 20px hsl(251 91% 64% / 0.15);
-    
+
     /* Glass effects */
     --glass-bg: 251 91% 64% / 0.05;
     --glass-border: 251 91% 64% / 0.1;
 
     /* Chart colors - Premium Purple Palette */
-    --chart-1: 263 85% 65%;         /* Main purple */
-    --chart-2: 270 91% 70%;         /* Light purple */
-    --chart-3: 285 85% 58%;         /* Violet */
-    --chart-4: 252 83% 57%;         /* Blue purple */
-    --chart-5: 295 73% 65%;         /* Pink purple */
+    --chart-1: 263 85% 65%;
+    /* Main purple */
+    --chart-2: 270 91% 70%;
+    /* Light purple */
+    --chart-3: 285 85% 58%;
+    /* Violet */
+    --chart-4: 252 83% 57%;
+    /* Blue purple */
+    --chart-5: 295 73% 65%;
+    /* Pink purple */
     --chart-success: 142 76% 36%;
     --chart-warning: 38 92% 50%;
     --chart-danger: 0 84% 60%;
@@ -120,7 +131,8 @@ All colors MUST be HSL.
     --secondary-foreground: 210 40% 90%;
 
     --muted: 220 15% 18%;
-    --muted-foreground: 215 20% 75%; /* Increased contrast */
+    --muted-foreground: 215 20% 75%;
+    /* Increased contrast */
 
     --accent: 220 15% 20%;
     --accent-foreground: 210 40% 95%;
@@ -134,21 +146,22 @@ All colors MUST be HSL.
     --surface: 220 15% 12%;
     --surface-foreground: 210 40% 96%;
     --surface-border: 220 15% 22%;
-    
+
     /* Dark mode gradients */
     --gradient-primary: linear-gradient(135deg, hsl(251 91% 64%) 0%, hsl(268 85% 73%) 100%);
     --gradient-secondary: linear-gradient(135deg, hsl(220 15% 15%) 0%, hsl(220 15% 13%) 100%);
     --gradient-accent: linear-gradient(135deg, hsl(251 91% 64%) 0%, hsl(268 85% 73%) 100%);
     --gradient-soft: linear-gradient(135deg, hsl(220 15% 13%) 0%, hsl(220 15% 11%) 100%);
-    
+
     /* Dark mode neumorphic shadows */
     --shadow-neumorphic: 6px 6px 12px hsl(220 20% 6%), -6px -6px 12px hsl(220 15% 16%);
     --shadow-neumorphic-inset: inset 3px 3px 6px hsl(220 20% 6%), inset -3px -3px 6px hsl(220 15% 16%);
     --shadow-neumorphic-soft: 3px 3px 8px hsl(220 20% 8%), -3px -3px 8px hsl(220 15% 14%);
     --shadow-purple-glow: 0 4px 20px hsl(251 91% 64% / 0.3);
-    
+
     /* Dark sidebar theme */
-    --sidebar-background: 220 15% 10%; /* Slightly darker */
+    --sidebar-background: 220 15% 10%;
+    /* Slightly darker */
     --sidebar-foreground: 210 40% 90%;
     --sidebar-primary: 251 91% 64%;
     --sidebar-primary-foreground: 0 0% 100%;
@@ -167,6 +180,7 @@ All colors MUST be HSL.
     opacity: 0;
     transform: translateY(20px);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0);
@@ -178,6 +192,7 @@ All colors MUST be HSL.
     transform: scale(0.95);
     opacity: 0;
   }
+
   100% {
     transform: scale(1);
     opacity: 1;
@@ -189,6 +204,7 @@ All colors MUST be HSL.
     transform: translateY(30px);
     opacity: 0;
   }
+
   100% {
     transform: translateY(0);
     opacity: 1;
@@ -257,7 +273,7 @@ All colors MUST be HSL.
   .safe-area-top {
     padding-top: max(1rem, env(safe-area-inset-top));
   }
-  
+
   .safe-area-bottom {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
@@ -278,6 +294,17 @@ All colors MUST be HSL.
     touch-action: manipulation;
     height: 100%;
     overflow-x: hidden;
+
+    /* Text wrapping improvement */
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  /* Mobile text wrapping override */
+  @media (max-width: 640px) {
+    html {
+      word-break: break-word;
+    }
   }
 
   body {
@@ -362,7 +389,7 @@ All colors MUST be HSL.
     -webkit-overflow-scrolling: touch;
     overflow: auto;
   }
-  
+
   .ios-safe-area {
     padding-top: constant(safe-area-inset-top);
     padding-top: env(safe-area-inset-top);
