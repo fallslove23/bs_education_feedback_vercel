@@ -156,13 +156,13 @@ const SurveyResults = () => {
 
   const fetchAggregatesWithInstructorNames = useCallback(async (baseAggregates: SurveyAggregate[]) => {
     const cache = new Map<string, string>();
-    
+
     // 강사 정보가 없는 설문들에 대해 survey_sessions에서 조회
     const surveysNeedingInstructors = baseAggregates.filter(agg => !agg.instructor_name);
-    
+
     if (surveysNeedingInstructors.length > 0) {
       const surveyIds = surveysNeedingInstructors.map(agg => agg.survey_id);
-      
+
       try {
         const { data: sessionData, error } = await supabase
           .from('survey_sessions')
@@ -176,11 +176,11 @@ const SurveyResults = () => {
 
         if (!error && sessionData && sessionData.length > 0) {
           const surveyInstructorMap = new Map<string, string[]>();
-          
+
           sessionData.forEach((session: any) => {
             const surveyId = session.survey_id;
             const instructorName = session.instructors?.name;
-            
+
             if (instructorName) {
               const existing = surveyInstructorMap.get(surveyId) || [];
               if (!existing.includes(instructorName)) {
@@ -189,7 +189,7 @@ const SurveyResults = () => {
               surveyInstructorMap.set(surveyId, existing);
             }
           });
-          
+
           // 강사명 포맷팅
           surveyInstructorMap.forEach((instructorNames, surveyId) => {
             if (instructorNames.length > 1) {
@@ -203,7 +203,7 @@ const SurveyResults = () => {
         console.error('Error fetching instructor names:', error);
       }
     }
-    
+
     setInstructorNamesCache(cache);
     return baseAggregates;
   }, []);
@@ -211,53 +211,53 @@ const SurveyResults = () => {
   // 운영 설문을 제외한 강사 만족도 계산
   const calculateAdjustedInstructorSatisfaction = () => {
     // 강사 만족도 데이터가 있는 설문들만 필터링 (제목에 관계없이)
-    const surveysWithInstructorSatisfaction = aggregates.filter(item => 
+    const surveysWithInstructorSatisfaction = aggregates.filter(item =>
       item.avg_instructor_satisfaction !== null &&
       item.avg_instructor_satisfaction > 0 &&
       item.response_count > 0
     );
-    
+
     if (surveysWithInstructorSatisfaction.length === 0) return null;
-    
+
     // 가중 평균 계산 (응답 수로 가중치)
-    const totalWeightedScore = surveysWithInstructorSatisfaction.reduce((sum, item) => 
+    const totalWeightedScore = surveysWithInstructorSatisfaction.reduce((sum, item) =>
       sum + (item.avg_instructor_satisfaction! * item.response_count), 0
     );
-    const totalResponses = surveysWithInstructorSatisfaction.reduce((sum, item) => 
+    const totalResponses = surveysWithInstructorSatisfaction.reduce((sum, item) =>
       sum + item.response_count, 0
     );
-    
+
     return totalResponses > 0 ? totalWeightedScore / totalResponses : null;
   };
 
   // 강사 정보를 포맷하는 함수 (여러 강사 처리)
-  const formatInstructorNames = (surveyId: string, instructorName: string | null, allInstructors?: Array<{name: string}>) => {
+  const formatInstructorNames = (surveyId: string, instructorName: string | null, allInstructors?: Array<{ name: string }>) => {
     // 캐시된 강사 정보 확인
     const cachedName = instructorNamesCache.get(surveyId);
     if (cachedName) {
       return cachedName;
     }
-    
+
     // 집계 데이터에서 해당 설문 찾기
     const currentSurvey = aggregates.find(agg => agg.survey_id === surveyId);
-    
+
     // 강사 만족도 데이터가 없거나 0인 경우에만 운영 만족도로 표시
     if (currentSurvey && (!currentSurvey.avg_instructor_satisfaction || currentSurvey.avg_instructor_satisfaction === 0)) {
       return '운영 만족도';
     }
-    
+
     // 기본 강사 이름이 있으면 여러 강사인지 확인하여 포맷
     if (instructorName && instructorName.trim() !== '') {
       // 쉼표로 구분된 여러 강사 이름 처리
       const instructorNames = instructorName.split(',').map(name => name.trim()).filter(name => name !== '');
-      
+
       if (instructorNames.length > 1) {
         return `${instructorNames[0]} 외 ${instructorNames.length - 1}명`;
       }
-      
+
       return instructorNames[0] || instructorName;
     }
-    
+
     // 여러 강사가 있는 경우 처리 (향후 확장 가능)
     if (allInstructors && allInstructors.length > 0) {
       if (allInstructors.length === 1) {
@@ -266,7 +266,7 @@ const SurveyResults = () => {
         return `${allInstructors[0].name} 외 ${allInstructors.length - 1}명`;
       }
     }
-    
+
     // 강사가 할당되지 않은 경우
     return '강사 미배정';
   };
@@ -363,14 +363,14 @@ const SurveyResults = () => {
         setCurrentInstructorName(null);
         return;
       }
-      
+
       try {
         const { data, error } = await supabase
           .from('instructors')
           .select('name')
           .eq('id', profile.instructor_id)
           .maybeSingle();
-        
+
         if (!error && data) {
           setCurrentInstructorName(data.name);
         }
@@ -378,7 +378,7 @@ const SurveyResults = () => {
         console.error('Failed to load instructor name:', error);
       }
     };
-    
+
     fetchCurrentInstructorName();
   }, [isInstructor, profile?.instructor_id]);
 
@@ -402,7 +402,7 @@ const SurveyResults = () => {
               .from('survey_questions')
               .select('id', { count: 'exact', head: true })
               .eq('survey_id', survey.survey_id);
-            
+
             return { survey, hasQuestions: (count || 0) > 0 };
           })
         );
@@ -448,7 +448,7 @@ const SurveyResults = () => {
     const yearFilter = selectedYearNumber;
     const roundFilter = selectedRoundNumber;
     // TODO: program_id로 필터링하도록 추후 survey_aggregates 조회 로직 수정 필요
-    const courseNameFilter = null; // selectedProgramId 사용하도록 변경 필요
+    const courseNameFilter = selectedProgramId; // selectedProgramId controls filtering by course name
     const instructorFilter = canViewAll && selectedInstructor !== 'all' ? selectedInstructor : null;
 
     const noFiltersApplied =
@@ -459,9 +459,9 @@ const SurveyResults = () => {
 
     if (noFiltersApplied) {
       if (hasBaseAggregates) {
-      fetchAggregatesWithInstructorNames(allAggregates).then(enhancedAggregates => {
-        setAggregates(enhancedAggregates);
-      });
+        fetchAggregatesWithInstructorNames(allAggregates).then(enhancedAggregates => {
+          setAggregates(enhancedAggregates);
+        });
         setSummary(baseSummary);
         setAggregatesLoading(false);
       } else {
@@ -852,15 +852,15 @@ const SurveyResults = () => {
 
             <div className="flex flex-col gap-2">
               <span className="text-sm text-muted-foreground">과정</span>
-              <Select 
-                value={selectedProgramId ?? 'all'} 
+              <Select
+                value={selectedProgramId ?? 'all'}
                 onValueChange={(val) => setSelectedProgramId(val === 'all' ? null : val)}
                 disabled={courseOptionsLoading}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={courseOptionsLoading ? '로딩 중...' : '전체 과정'}>
                     {courseOptionsLoading ? '로딩 중...' : (
-                      selectedProgramId 
+                      selectedProgramId
                         ? courseOptions.find(opt => opt.value === selectedProgramId)?.label ?? '전체 과정'
                         : '전체 과정'
                     )}
@@ -879,17 +879,17 @@ const SurveyResults = () => {
 
             <div className="flex flex-col gap-2">
               <span className="text-sm text-muted-foreground">강사</span>
-              <Select 
-                value={isInstructor && !canViewAll ? (profile?.instructor_id || 'all') : selectedInstructor} 
+              <Select
+                value={isInstructor && !canViewAll ? (profile?.instructor_id || 'all') : selectedInstructor}
                 onValueChange={isInstructor && !canViewAll ? undefined : setSelectedInstructor}
                 disabled={isInstructor && !canViewAll}
               >
                 <SelectTrigger className={isInstructor && !canViewAll ? 'opacity-50' : ''}>
                   <SelectValue placeholder="전체 강사">
-                    {isInstructor && !canViewAll && currentInstructorName 
-                      ? currentInstructorName 
-                      : selectedInstructor === 'all' 
-                        ? '전체 강사' 
+                    {isInstructor && !canViewAll && currentInstructorName
+                      ? currentInstructorName
+                      : selectedInstructor === 'all'
+                        ? '전체 강사'
                         : instructors.find(i => i.id === selectedInstructor)?.name || '전체 강사'
                     }
                   </SelectValue>
@@ -999,13 +999,13 @@ const SurveyResults = () => {
                       <TableCell>{formatInstructorNames(item.survey_id, item.instructor_name)}</TableCell>
                       <TableCell className="text-center">{formatNumber(item.response_count)}</TableCell>
                       <TableCell className="text-center">{formatSatisfaction(item.avg_overall_satisfaction)}</TableCell>
-                       <TableCell className="text-center">{formatSatisfaction(item.avg_course_satisfaction)}</TableCell>
-                       <TableCell className="text-center">
-                         {item.title.includes('[종료 설문]') || item.title.includes('운영') 
-                           ? '-' 
-                           : formatSatisfaction(item.avg_instructor_satisfaction)
-                         }
-                       </TableCell>
+                      <TableCell className="text-center">{formatSatisfaction(item.avg_course_satisfaction)}</TableCell>
+                      <TableCell className="text-center">
+                        {item.title.includes('[종료 설문]') || item.title.includes('운영')
+                          ? '-'
+                          : formatSatisfaction(item.avg_instructor_satisfaction)
+                        }
+                      </TableCell>
                       <TableCell className="text-center">{formatSatisfaction(item.avg_operation_satisfaction)}</TableCell>
                       <TableCell className="text-center">
                         <Badge variant={item.status === 'completed' ? 'secondary' : 'outline'}>
