@@ -592,74 +592,75 @@ const CourseStatisticsManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-br from-primary/5 via-primary/10 to-secondary/5 rounded-xl p-6 border border-primary/20">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-            <FileSpreadsheet className="h-4 w-4 text-white" />
+      <div className="bg-gradient-to-br from-primary/5 via-primary/10 to-secondary/5 rounded-xl p-6 border border-primary/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
+              <FileSpreadsheet className="h-4 w-4 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+              과정별 통계 관리
+            </h1>
           </div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-            과정별 통계 관리
-          </h1>
+          <p className="text-muted-foreground max-w-2xl">
+            과정별 통계 데이터를 조회, 입력, 수정, 삭제하거나 Excel 업로드 및 자동 생성할 수 있습니다.
+          </p>
         </div>
-        <p className="text-muted-foreground">
-          과정별 통계 데이터를 조회, 입력, 수정, 삭제하거나 Excel 업로드 및 자동 생성할 수 있습니다.
-        </p>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsUploadDialogOpen(true)}
+            disabled={loading || !isAdmin}
+            className={`bg-white/50 backdrop-blur-sm hover:bg-white/80 ${!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Excel 업로드
+          </Button>
+          <Button
+            variant="outline"
+            onClick={generateFromSurveys}
+            disabled={loading || !isAdmin}
+            className={`bg-white/50 backdrop-blur-sm hover:bg-white/80 ${!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            {loading ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+            ) : (
+              <Wand2 className="h-4 w-4 mr-2" />
+            )}
+            자동 생성
+          </Button>
+          {isAdmin ? (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={() => { setEditingItem(null); setIsDialogOpen(true); }} className="shadow-lg shadow-primary/20">
+                  <Plus className="h-4 w-4 mr-2" />
+                  새 통계 추가
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{editingItem ? '통계 수정' : '새 통계 추가'}</DialogTitle>
+                  <DialogDescription>
+                    과정별 통계 정보를 입력해주세요.
+                  </DialogDescription>
+                </DialogHeader>
+                <StatisticForm
+                  initialData={editingItem}
+                  onSave={handleSave}
+                  onCancel={() => setIsDialogOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
+          ) : (
+            <div className="flex items-center text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-md">
+              관리자 권한 필요
+            </div>
+          )}
+        </div>
       </div>
 
       <Card>
-        <CardHeader>
-          <div className="flex justify-end items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsUploadDialogOpen(true)}
-              disabled={loading || !isAdmin}
-              className={!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Excel 업로드
-            </Button>
-            <Button
-              variant="outline"
-              onClick={generateFromSurveys}
-              disabled={loading || !isAdmin}
-              className={!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}
-            >
-              {loading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
-              ) : (
-                <Wand2 className="h-4 w-4 mr-2" />
-              )}
-              자동 생성
-            </Button>
-            {isAdmin ? (
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button onClick={() => { setEditingItem(null); setIsDialogOpen(true); }}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    새 통계 추가
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>{editingItem ? '통계 수정' : '새 통계 추가'}</DialogTitle>
-                    <DialogDescription>
-                      과정별 통계 정보를 입력해주세요.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <StatisticForm
-                    initialData={editingItem}
-                    onSave={handleSave}
-                    onCancel={() => setIsDialogOpen(false)}
-                  />
-                </DialogContent>
-              </Dialog>
-            ) : (
-              <div className="flex items-center text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-md">
-                관리자 권한 필요
-              </div>
-            )}
-          </div>
-        </CardHeader>
 
         <CardContent className="space-y-4">
           {/* 필터 섹션 */}
@@ -746,9 +747,9 @@ const CourseStatisticsManagement = () => {
                         </TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded-full text-xs ${stat.status === '완료' ? 'bg-success/20 text-success' :
-                              stat.status === '진행 중' ? 'bg-info/20 text-info' :
-                                stat.status === '진행 예정' ? 'bg-warning/20 text-warning' :
-                                  'bg-muted text-muted-foreground'
+                            stat.status === '진행 중' ? 'bg-info/20 text-info' :
+                              stat.status === '진행 예정' ? 'bg-warning/20 text-warning' :
+                                'bg-muted text-muted-foreground'
                             }`}>
                             {stat.status}
                           </span>
