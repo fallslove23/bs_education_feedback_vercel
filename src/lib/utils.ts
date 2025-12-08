@@ -2,7 +2,10 @@ import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
 export function getBaseUrl(): string {
-  // 항상 실제 프로덕션 도메인 사용
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  // Fallback for SSR or non-browser environments
   return 'https://sseducationfeedback.info';
 }
 
