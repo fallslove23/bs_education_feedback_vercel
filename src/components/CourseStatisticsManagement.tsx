@@ -61,10 +61,10 @@ const CourseStatisticsManagement = () => {
     const parsed = Number(normalized);
     return Number.isFinite(parsed) ? parsed : null;
   };
-  
+
   // 필터링된 통계에서 사용 가능한 차수 추출
   const availableRounds = [...new Set(allStatistics.filter(stat => stat.year === selectedYear).map(stat => stat.round))].sort((a, b) => a - b);
-  
+
   // 표준 과정명 목록 사용 (course_names 테이블에서 가져온 것)
   const availableCourses = standardCourseNames;
 
@@ -119,15 +119,15 @@ const CourseStatisticsManagement = () => {
 
   const applyFilters = () => {
     let filtered = allStatistics.filter(stat => stat.year === selectedYear);
-    
+
     if (selectedRound !== 'all') {
       filtered = filtered.filter(stat => stat.round === parseInt(selectedRound));
     }
-    
+
     if (selectedCourse !== 'all') {
       filtered = filtered.filter(stat => stat.course_name === selectedCourse);
     }
-    
+
     setStatistics(filtered.sort((a, b) => a.round - b.round));
   };
 
@@ -188,14 +188,14 @@ const CourseStatisticsManagement = () => {
           .from('course_statistics')
           .update(statisticData)
           .eq('id', editingItem.id);
-        
+
         if (error) throw error;
         toast({ title: "성공", description: "통계 데이터가 수정되었습니다." });
       } else {
         const { error } = await supabase
           .from('course_statistics')
           .insert(statisticData);
-        
+
         if (error) throw error;
         toast({ title: "성공", description: "통계 데이터가 추가되었습니다." });
       }
@@ -232,7 +232,7 @@ const CourseStatisticsManagement = () => {
         .eq('id', id);
 
       if (error) throw error;
-      
+
       toast({ title: "성공", description: "통계 데이터가 삭제되었습니다." });
       fetchAllStatistics();
     } catch (error) {
@@ -252,9 +252,9 @@ const CourseStatisticsManagement = () => {
     // 파일 확장자 검증
     const fileName = file.name.toLowerCase();
     if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
-      setUploadStatus({ 
-        type: 'error', 
-        message: 'Excel 파일(.xlsx 또는 .xls)만 업로드 가능합니다.' 
+      setUploadStatus({
+        type: 'error',
+        message: 'Excel 파일(.xlsx 또는 .xls)만 업로드 가능합니다.'
       });
       event.target.value = '';
       return;
@@ -268,7 +268,7 @@ const CourseStatisticsManagement = () => {
 
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
-        
+
         if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
           throw new Error('Excel 파일에 시트가 없습니다.');
         }
@@ -345,9 +345,9 @@ const CourseStatisticsManagement = () => {
 
         const { error } = await supabase
           .from('course_statistics')
-          .upsert(statisticsToUpload, { 
+          .upsert(statisticsToUpload, {
             onConflict: 'year,round,course_name',
-            ignoreDuplicates: false 
+            ignoreDuplicates: false
           });
 
         if (error) {
@@ -355,18 +355,18 @@ const CourseStatisticsManagement = () => {
           throw new Error(`데이터베이스 저장 오류: ${error.message}`);
         }
 
-        setUploadStatus({ 
-          type: 'success', 
-          message: `${statisticsToUpload.length}개의 통계 데이터가 성공적으로 업로드되었습니다.` 
+        setUploadStatus({
+          type: 'success',
+          message: `${statisticsToUpload.length}개의 통계 데이터가 성공적으로 업로드되었습니다.`
         });
-        
+
         setIsUploadDialogOpen(false);
         fetchAllStatistics();
       } catch (error: any) {
         console.error('Error uploading Excel:', error);
-        setUploadStatus({ 
-          type: 'error', 
-          message: error.message || 'Excel 파일 업로드 중 오류가 발생했습니다.' 
+        setUploadStatus({
+          type: 'error',
+          message: error.message || 'Excel 파일 업로드 중 오류가 발생했습니다.'
         });
       } finally {
         setLoading(false);
@@ -374,28 +374,28 @@ const CourseStatisticsManagement = () => {
         event.target.value = '';
       }
     };
-    
+
     reader.onerror = () => {
-      setUploadStatus({ 
-        type: 'error', 
-        message: '파일을 읽는 중 오류가 발생했습니다.' 
+      setUploadStatus({
+        type: 'error',
+        message: '파일을 읽는 중 오류가 발생했습니다.'
       });
       setLoading(false);
       event.target.value = '';
     };
-    
+
     reader.readAsArrayBuffer(file);
   };
 
   const formatDate = (dateValue: any): string => {
     if (!dateValue) return '';
-    
+
     // Excel 날짜 숫자인 경우
     if (typeof dateValue === 'number') {
       const date = XLSX.SSF.parse_date_code(dateValue);
       return `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
     }
-    
+
     // 이미 문자열인 경우
     if (typeof dateValue === 'string') {
       const date = new Date(dateValue);
@@ -403,7 +403,7 @@ const CourseStatisticsManagement = () => {
         return date.toISOString().split('T')[0];
       }
     }
-    
+
     return dateValue.toString();
   };
 
@@ -421,7 +421,7 @@ const CourseStatisticsManagement = () => {
 
     try {
       setLoading(true);
-      
+
       // 해당 년도의 완료된 설문 데이터 가져오기
       const { data: surveys, error: surveyError } = await supabase
         .from('surveys')
@@ -506,60 +506,60 @@ const CourseStatisticsManagement = () => {
             });
           }
 
-        const stat = generatedStats.get(key)!;
-        if (educationDay) {
-          stat.course_days = educationDay;
-          stat.education_days = educationDay;
-        }
-        stat.status = statusLabel;
-
-        // 만족도 계산
-        let instructorScores: number[] = [];
-        let courseScores: number[] = [];
-        let operationScores: number[] = [];
-
-        validResponses.forEach(response => {
-          response.question_answers?.forEach(answer => {
-            if (answer.survey_questions?.question_type === 'scale' && answer.answer_value) {
-              let score = typeof answer.answer_value === 'number' ? answer.answer_value : Number(answer.answer_value);
-              if (score <= 5 && score > 0) score = score * 2; // 5점 척도를 10점으로 변환
-
-              if (answer.survey_questions.satisfaction_type === 'instructor') {
-                instructorScores.push(score);
-              } else if (answer.survey_questions.satisfaction_type === 'course') {
-                courseScores.push(score);
-              } else if (answer.survey_questions.satisfaction_type === 'operation') {
-                operationScores.push(score);
-              }
-            }
-          });
-        });
-
-        if (responseCount > 0) {
-          stat.enrolled_count = responseCount;
-          const currentCumulative = typeof stat.cumulative_count === 'number' ? stat.cumulative_count : 0;
-          stat.cumulative_count = Math.max(currentCumulative, responseCount);
-        } else if (!stat.enrolled_count) {
-          stat.enrolled_count = expectedParticipants;
-          if (!stat.cumulative_count) {
-            stat.cumulative_count = expectedParticipants;
+          const stat = generatedStats.get(key)!;
+          if (educationDay) {
+            stat.course_days = educationDay;
+            stat.education_days = educationDay;
           }
-        }
+          stat.status = statusLabel;
 
-        // 평균 계산
-        stat.instructor_satisfaction = instructorScores.length > 0 ?
-          Number((instructorScores.reduce((a, b) => a + b, 0) / instructorScores.length).toFixed(2)) : null;
-        stat.course_satisfaction = courseScores.length > 0 ? 
-          Number((courseScores.reduce((a, b) => a + b, 0) / courseScores.length).toFixed(2)) : null;
-        stat.operation_satisfaction = operationScores.length > 0 ? 
-          Number((operationScores.reduce((a, b) => a + b, 0) / operationScores.length).toFixed(2)) : null;
+          // 만족도 계산
+          let instructorScores: number[] = [];
+          let courseScores: number[] = [];
+          let operationScores: number[] = [];
 
-        // 종합 만족도
-        const validScores = [stat.instructor_satisfaction, stat.course_satisfaction, stat.operation_satisfaction]
-          .filter(score => score !== null) as number[];
-        stat.total_satisfaction = validScores.length > 0 ? 
-          Number((validScores.reduce((a, b) => a + b, 0) / validScores.length).toFixed(2)) : null;
-      });
+          validResponses.forEach(response => {
+            response.question_answers?.forEach(answer => {
+              if (answer.survey_questions?.question_type === 'scale' && answer.answer_value) {
+                let score = typeof answer.answer_value === 'number' ? answer.answer_value : Number(answer.answer_value);
+                if (score <= 5 && score > 0) score = score * 2; // 5점 척도를 10점으로 변환
+
+                if (answer.survey_questions.satisfaction_type === 'instructor') {
+                  instructorScores.push(score);
+                } else if (answer.survey_questions.satisfaction_type === 'course') {
+                  courseScores.push(score);
+                } else if (answer.survey_questions.satisfaction_type === 'operation') {
+                  operationScores.push(score);
+                }
+              }
+            });
+          });
+
+          if (responseCount > 0) {
+            stat.enrolled_count = responseCount;
+            const currentCumulative = typeof stat.cumulative_count === 'number' ? stat.cumulative_count : 0;
+            stat.cumulative_count = Math.max(currentCumulative, responseCount);
+          } else if (!stat.enrolled_count) {
+            stat.enrolled_count = expectedParticipants;
+            if (!stat.cumulative_count) {
+              stat.cumulative_count = expectedParticipants;
+            }
+          }
+
+          // 평균 계산
+          stat.instructor_satisfaction = instructorScores.length > 0 ?
+            Number((instructorScores.reduce((a, b) => a + b, 0) / instructorScores.length).toFixed(2)) : null;
+          stat.course_satisfaction = courseScores.length > 0 ?
+            Number((courseScores.reduce((a, b) => a + b, 0) / courseScores.length).toFixed(2)) : null;
+          stat.operation_satisfaction = operationScores.length > 0 ?
+            Number((operationScores.reduce((a, b) => a + b, 0) / operationScores.length).toFixed(2)) : null;
+
+          // 종합 만족도
+          const validScores = [stat.instructor_satisfaction, stat.course_satisfaction, stat.operation_satisfaction]
+            .filter(score => score !== null) as number[];
+          stat.total_satisfaction = validScores.length > 0 ?
+            Number((validScores.reduce((a, b) => a + b, 0) / validScores.length).toFixed(2)) : null;
+        });
 
       const statsArray = Array.from(generatedStats.values());
 
@@ -608,62 +608,56 @@ const CourseStatisticsManagement = () => {
 
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>과정별 통계 데이터</CardTitle>
-              <CardDescription>연도, 차수, 과정명으로 필터링하여 통계를 조회하세요</CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => setIsUploadDialogOpen(true)}
-                disabled={loading || !isAdmin}
-                className={!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Excel 업로드
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={generateFromSurveys}
-                disabled={loading || !isAdmin}
-                className={!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}
-              >
-                {loading ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
-                ) : (
-                  <Wand2 className="h-4 w-4 mr-2" />
-                )}
-                자동 생성
-              </Button>
-              {isAdmin ? (
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button onClick={() => { setEditingItem(null); setIsDialogOpen(true); }}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      새 통계 추가
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>{editingItem ? '통계 수정' : '새 통계 추가'}</DialogTitle>
-                      <DialogDescription>
-                        과정별 통계 정보를 입력해주세요.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <StatisticForm 
-                      initialData={editingItem} 
-                      onSave={handleSave}
-                      onCancel={() => setIsDialogOpen(false)}
-                    />
-                  </DialogContent>
-                </Dialog>
+          <div className="flex justify-end items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsUploadDialogOpen(true)}
+              disabled={loading || !isAdmin}
+              className={!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Excel 업로드
+            </Button>
+            <Button
+              variant="outline"
+              onClick={generateFromSurveys}
+              disabled={loading || !isAdmin}
+              className={!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}
+            >
+              {loading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
               ) : (
-                <div className="flex items-center text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-md">
-                  관리자 권한 필요
-                </div>
+                <Wand2 className="h-4 w-4 mr-2" />
               )}
-            </div>
+              자동 생성
+            </Button>
+            {isAdmin ? (
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => { setEditingItem(null); setIsDialogOpen(true); }}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    새 통계 추가
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>{editingItem ? '통계 수정' : '새 통계 추가'}</DialogTitle>
+                    <DialogDescription>
+                      과정별 통계 정보를 입력해주세요.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <StatisticForm
+                    initialData={editingItem}
+                    onSave={handleSave}
+                    onCancel={() => setIsDialogOpen(false)}
+                  />
+                </DialogContent>
+              </Dialog>
+            ) : (
+              <div className="flex items-center text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-md">
+                관리자 권한 필요
+              </div>
+            )}
           </div>
         </CardHeader>
 
@@ -689,7 +683,7 @@ const CourseStatisticsManagement = () => {
                   ))}
                 </SelectContent>
               </Select>
-              
+
               <Select value={selectedRound} onValueChange={(value) => {
                 setSelectedRound(value);
                 setSelectedCourse('all');
@@ -751,12 +745,11 @@ const CourseStatisticsManagement = () => {
                           {stat.course_start_date} ~ {stat.course_end_date}
                         </TableCell>
                         <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            stat.status === '완료' ? 'bg-success/20 text-success' :
-                            stat.status === '진행 중' ? 'bg-info/20 text-info' :
-                            stat.status === '진행 예정' ? 'bg-warning/20 text-warning' :
-                            'bg-muted text-muted-foreground'
-                          }`}>
+                          <span className={`px-2 py-1 rounded-full text-xs ${stat.status === '완료' ? 'bg-success/20 text-success' :
+                              stat.status === '진행 중' ? 'bg-info/20 text-info' :
+                                stat.status === '진행 예정' ? 'bg-warning/20 text-warning' :
+                                  'bg-muted text-muted-foreground'
+                            }`}>
                             {stat.status}
                           </span>
                         </TableCell>
@@ -812,7 +805,7 @@ const CourseStatisticsManagement = () => {
                 <AlertDescription>{uploadStatus.message}</AlertDescription>
               </Alert>
             )}
-            
+
             <div className="border-2 border-dashed border-muted rounded-lg p-8 text-center">
               <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <div className="space-y-2">
@@ -1037,7 +1030,7 @@ const StatisticForm = ({ initialData, onSave, onCancel }: StatisticFormProps) =>
           />
         </div>
       </div>
-      
+
       <div className="flex justify-end gap-2 pt-4">
         <Button type="button" variant="outline" onClick={onCancel}>
           취소
