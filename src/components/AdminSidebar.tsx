@@ -63,10 +63,10 @@ export function AdminSidebar() {
   // 역할 기반 메뉴 구조 - 사용자가 가진 모든 역할의 메뉴를 표시
   const getMenuItems = (): MenuSection[] => {
     const sections: MenuSection[] = [];
-    
+
     // 관리자/운영자는 조직 전체 메뉴 접근
     const hasAdminAccess = isAdmin || isOperator;
-    
+
     if (hasAdminAccess) {
       sections.push(
         {
@@ -76,7 +76,7 @@ export function AdminSidebar() {
           ]
         },
         {
-          title: "조직 분석", 
+          title: "조직 분석",
           items: [
             { title: "결과분석", url: "/dashboard/results", icon: BarChart3, exact: false },
             { title: "과정별 결과 보고", url: "/dashboard/course-reports", icon: TrendingUp, exact: false },
@@ -99,6 +99,7 @@ export function AdminSidebar() {
           items: [
             { title: "이메일 로그", url: "/dashboard/email-logs", icon: Mail, exact: false },
             { title: "시스템 로그", url: "/dashboard/system-logs", icon: Settings, exact: false },
+            { title: "데이터 백업", url: "/dashboard/backup", icon: Database, exact: false },
             { title: "정책 관리", url: "/dashboard/policy-management", icon: Shield, exact: false }
           ]
         }
@@ -141,7 +142,7 @@ export function AdminSidebar() {
     options: { variant?: "default" | "developer" } = {}
   ) => {
     const { variant = "default" } = options;
-    
+
     return (
       <SidebarMenuItem key={item.url}>
         <SidebarMenuButton
@@ -171,12 +172,12 @@ export function AdminSidebar() {
                     active ? "text-primary-foreground font-semibold" : "text-sidebar-foreground"
                   )}>{item.title}</span>
                   {item.badge && (
-                    <Badge 
-                      variant="secondary" 
+                    <Badge
+                      variant="secondary"
                       className={cn(
                         "text-[0.6rem] h-4 px-1.5 ml-auto font-medium",
-                        active 
-                          ? "bg-primary-foreground/20 text-primary-foreground border-0 font-semibold" 
+                        active
+                          ? "bg-primary-foreground/20 text-primary-foreground border-0 font-semibold"
                           : "bg-sidebar-primary/10 text-sidebar-primary border-sidebar-primary/20"
                       )}
                     >
@@ -192,7 +193,7 @@ export function AdminSidebar() {
     );
   };
 
-    return (
+  return (
     <Sidebar collapsible={isMobile ? "offcanvas" : "none"} className="border-r border-sidebar-border/50 bg-sidebar shadow-neumorphic">
       <SidebarContent className="bg-gradient-soft px-3 py-6 text-sidebar-foreground sidebar-scroll">
         <div className="space-y-6">

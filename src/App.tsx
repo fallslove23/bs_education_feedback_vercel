@@ -22,6 +22,7 @@ const DashboardCourseReports = lazy(() => import("./pages/DashboardCourseReports
 const DashboardPolicyManagement = lazy(() => import("./pages/DashboardPolicyManagement"));
 const DashboardInstructorManagement = lazy(() => import("./pages/DashboardInstructorManagement"));
 const DashboardTemplateManagement = lazy(() => import("./pages/DashboardTemplateManagement"));
+const DashboardBackup = lazy(() => import("./pages/DashboardBackup"));
 const DashboardMyStats = lazy(() => import("./pages/DashboardMyStats"));
 const DashboardEmailLogs = lazy(() => import("./pages/DashboardEmailLogs"));
 const DashboardSystemLogs = lazy(() => import("./pages/DashboardSystemLogs"));
@@ -348,6 +349,15 @@ function AppContent() {
           element={
             <ProtectedRoute allowedRoles={["admin", "operator"]}>
               <DashboardPolicyManagement />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/dashboard/backup"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "operator"]}>
+              <DashboardBackup />
             </ProtectedRoute>
           }
         />
