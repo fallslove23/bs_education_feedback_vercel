@@ -28,7 +28,7 @@ const LoadingScreen = () => {
           <p className="text-primary-foreground/80">교육과정 피드백 시스템</p>
         </div>
         <div className="flex justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-foreground/80"></div>
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-foreground/30 border-t-primary-foreground"></div>
         </div>
       </div>
     </div>

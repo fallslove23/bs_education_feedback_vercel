@@ -120,7 +120,7 @@ All colors MUST be HSL.
     --secondary-foreground: 210 40% 90%;
 
     --muted: 220 15% 18%;
-    --muted-foreground: 215 20% 70%;
+    --muted-foreground: 215 20% 75%; /* Increased contrast */
 
     --accent: 220 15% 20%;
     --accent-foreground: 210 40% 95%;
@@ -148,16 +148,16 @@ All colors MUST be HSL.
     --shadow-purple-glow: 0 4px 20px hsl(251 91% 64% / 0.3);
     
     /* Dark sidebar theme */
-    --sidebar-background: 220 15% 12%;
+    --sidebar-background: 220 15% 10%; /* Slightly darker */
     --sidebar-foreground: 210 40% 90%;
     --sidebar-primary: 251 91% 64%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 15% 18%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 220 15% 20%;
+    --sidebar-border: 220 15% 18%;
     --sidebar-ring: 251 91% 64%;
     --sidebar-muted: 220 15% 16%;
-    --sidebar-muted-foreground: 215 20% 65%;
+    --sidebar-muted-foreground: 215 20% 70%;
   }
 }
 
