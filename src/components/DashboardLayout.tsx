@@ -19,12 +19,12 @@ export function DashboardLayout({ children, title, description }: DashboardLayou
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background text-foreground overflow-x-hidden">
+      <div className="h-screen flex w-full bg-background text-foreground overflow-hidden">
         <AdminSidebar />
 
-        <div className="flex-1 flex flex-col min-w-0 scrollable-y">
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
           {/* Header - 더 컴팩트하게 */}
-          <header className="h-12 border-b border-surface-border bg-surface/90 backdrop-blur-sm supports-[backdrop-filter]:bg-surface/80 sticky top-0 z-50 shadow-sm ios-safe-area transition-colors">
+          <header className="h-12 border-b border-surface-border bg-surface/90 backdrop-blur-sm supports-[backdrop-filter]:bg-surface/80 shrink-0 z-50 shadow-sm ios-safe-area transition-colors">
             <div className="flex items-center h-full px-2 sm:px-3 max-w-full overflow-hidden">
               {/* Left: Sidebar Toggle */}
               <div className="flex items-center shrink-0">
@@ -107,8 +107,8 @@ export function DashboardLayout({ children, title, description }: DashboardLayou
           </header>
 
           {/* Main content - 컴팩트한 패딩 */}
-          <main className="flex-1 p-2 sm:p-3 md:p-4 touch-scroll safe-bottom compact-content">
-            <div className="max-w-full overflow-hidden">
+          <main className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 touch-scroll safe-bottom compact-content scroll-smooth">
+            <div className="max-w-full min-h-full">
               {children}
             </div>
           </main>
