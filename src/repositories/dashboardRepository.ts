@@ -32,8 +32,8 @@ function normalizeDashboardCounts(raw: RawDashboardCounts | null | undefined): D
     survey_count: raw.survey_count ?? 0,
     respondent_count: raw.respondent_count ?? raw.respondent_cc ?? 0,
     instructor_count: raw.instructor_count ?? raw.instructor_cc ?? 0,
-    avg_score: (typeof raw.avg_score === 'number' && Number.isFinite(raw.avg_score)) 
-      ? raw.avg_score 
+    avg_score: (typeof raw.avg_score === 'number' && Number.isFinite(raw.avg_score))
+      ? raw.avg_score
       : null,
   };
 }
@@ -54,10 +54,11 @@ export async function fetchDashboardCounts(
       sessionIdParam = sessionKey;
     }
 
-    const { data, error } = await supabase.rpc('rpc_dashboard_counts' as any, {
-      p_year: year ?? null,
-      p_session_id: sessionIdParam,
-    }) as { data: RawDashboardCounts[] | null; error: any };
+    // The RPC type is automatically inferred from the Database definition
+    const { data, error } = await supabase.rpc('rpc_dashboard_counts', {
+      p_year: year ?? undefined, // Use undefined for optional parameters if needed, but null is also fine often. The definition says p_year?: number
+      p_session_id: sessionIdParam ?? undefined,
+    });
 
     if (error) {
       console.error('RPC error in fetchDashboardCounts:', error);
