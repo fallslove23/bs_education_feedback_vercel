@@ -169,7 +169,7 @@ const Index = () => {
 
       if (timeFilter === 'all') {
         if (statusFilter === 'all') {
-          query = query.in('status', ['active', 'public']);
+          query = query.in('status', ['active', 'public', 'completed']);
         } else {
           query = query.eq('status', statusFilter);
         }
@@ -466,16 +466,16 @@ const Index = () => {
     <MobileOptimizedContainer>
       <div className="min-h-screen bg-background">
         <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-primary font-display">BS/SS 교육과정 설문 피드백</h1>
-              <div className="flex items-center gap-2">
+          <div className="container mx-auto px-4 py-3 md:py-4">
+            <div className="flex items-center justify-between gap-4">
+              <h1 className="text-lg md:text-2xl font-bold text-primary font-display truncate">BS/SS 교육과정 설문 피드백</h1>
+              <div className="flex items-center gap-2 shrink-0">
                 {authUser ? (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => navigate('/default-redirect')}
-                    className="font-sans"
+                    className="font-sans text-xs md:text-sm h-8 md:h-9"
                   >
                     대시보드
                   </Button>
@@ -484,7 +484,7 @@ const Index = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => navigate('/auth')}
-                    className="font-sans"
+                    className="font-sans text-xs md:text-sm h-8 md:h-9"
                   >
                     로그인
                   </Button>
@@ -492,9 +492,9 @@ const Index = () => {
               </div>
             </div>
             {filterSummaryBadges.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-1.5 md:gap-2">
                 {filterSummaryBadges.map((badgeLabel, index) => (
-                  <Badge key={`${badgeLabel}-${index}`} variant="outline" className="font-sans">
+                  <Badge key={`${badgeLabel}-${index}`} variant="outline" className="font-sans text-[10px] md:text-xs px-2 py-0.5">
                     {badgeLabel}
                   </Badge>
                 ))}
@@ -503,33 +503,33 @@ const Index = () => {
           </div>
         </header>
 
-        <main className="container mx-auto px-4 py-8 space-y-8">
-          <div className="space-y-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <main className="container mx-auto px-4 py-6 md:py-8 space-y-6 md:space-y-8">
+          <div className="space-y-4 md:space-y-6">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <h2 className="text-3xl font-bold text-foreground mb-2 font-display">BS/SS 교육과정 설문 피드백</h2>
-                <p className="text-muted-foreground font-sans">
-                  참여 가능한 설문조사 목록입니다. 설문조사를 클릭하여 참여해주세요.
+                <h2 className="text-xl md:text-3xl font-bold text-foreground mb-1 md:mb-2 font-display">BS/SS 교육과정 설문 피드백</h2>
+                <p className="text-sm md:text-base text-muted-foreground font-sans">
+                  참여 가능한 설문조사 목록입니다.
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 self-start rounded-lg bg-muted p-1">
+              <div className="flex items-center gap-1 self-start rounded-lg bg-muted p-1 w-full md:w-auto">
                 <Button
                   variant={timeFilter === 'today' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setTimeFilter('today')}
-                  className="px-4 py-2"
+                  className="flex-1 md:flex-none px-3 md:px-4 py-2 text-xs md:text-sm h-8 md:h-9"
                 >
-                  <Calendar className="h-4 w-4 mr-2" />
+                  <Calendar className="h-3.5 w-3.5 mr-1.5 md:mr-2" />
                   오늘 설문
                 </Button>
                 <Button
                   variant={timeFilter === 'all' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setTimeFilter('all')}
-                  className="px-4 py-2"
+                  className="flex-1 md:flex-none px-3 md:px-4 py-2 text-xs md:text-sm h-8 md:h-9"
                 >
-                  <FileText className="h-4 w-4 mr-2" />
+                  <FileText className="h-3.5 w-3.5 mr-1.5 md:mr-2" />
                   전체 설문
                 </Button>
               </div>
@@ -538,22 +538,22 @@ const Index = () => {
             {timeFilter === 'all' && (
               <div className="grid gap-4 md:grid-cols-2">
                 <Card className="shadow-sm h-full">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-lg font-display">
-                      <Clock className="h-5 w-5 text-primary" />
+                  <CardHeader className="pb-2 md:pb-3 px-4 py-3 md:p-6">
+                    <CardTitle className="flex items-center gap-2 text-base md:text-lg font-display">
+                      <Clock className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                       최근 생성 설문
                     </CardTitle>
-                    <CardDescription className="font-sans">
+                    <CardDescription className="font-sans text-xs md:text-sm">
                       막 등록된 설문을 빠르게 찾아보세요.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="px-4 pb-3 pt-0 md:p-6 md:pt-0">
                     {recommendationsLoading ? (
-                      <p className="text-sm text-muted-foreground text-center font-sans">
+                      <p className="text-xs md:text-sm text-muted-foreground text-center font-sans py-2">
                         추천 설문을 불러오는 중입니다.
                       </p>
                     ) : recentSurveys.length > 0 ? (
-                      <div className="space-y-3">
+                      <div className="space-y-2 md:space-y-3">
                         {recentSurveys.map((survey) => {
                           const instructorName = getInstructorNames(survey);
                           return (
@@ -563,18 +563,18 @@ const Index = () => {
                               tabIndex={0}
                               onClick={() => handleSurveyNavigation(survey.id)}
                               onKeyDown={(event) => handleCardKeyDown(event, survey.id)}
-                              className="rounded-lg border bg-muted/40 p-3 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                              className="rounded-lg border bg-muted/40 p-2.5 md:p-3 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                             >
                               <div className="flex items-center gap-2">
-                                <span className="font-medium text-sm text-foreground flex-1 truncate" title={survey.title}>
+                                <span className="font-medium text-xs md:text-sm text-foreground flex-1 truncate" title={survey.title}>
                                   {survey.title}
                                 </span>
-                                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                  생성일 {formatDate(survey.created_at)}
+                                <span className="text-[10px] md:text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                                  {formatDate(survey.created_at)}
                                 </span>
                               </div>
                               {instructorName && (
-                                <p className="mt-1 text-xs text-muted-foreground truncate" title={instructorName}>
+                                <p className="mt-0.5 text-[10px] md:text-xs text-muted-foreground truncate" title={instructorName}>
                                   강사: {instructorName}
                                 </p>
                               )}
@@ -583,7 +583,7 @@ const Index = () => {
                         })}
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground text-center font-sans">
+                      <p className="text-xs md:text-sm text-muted-foreground text-center font-sans py-2">
                         최근에 생성된 설문이 없습니다.
                       </p>
                     )}
@@ -591,22 +591,22 @@ const Index = () => {
                 </Card>
 
                 <Card className="shadow-sm h-full">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-lg font-display">
-                      <Hourglass className="h-5 w-5 text-primary" />
+                  <CardHeader className="pb-2 md:pb-3 px-4 py-3 md:p-6">
+                    <CardTitle className="flex items-center gap-2 text-base md:text-lg font-display">
+                      <Hourglass className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                       마감 임박
                     </CardTitle>
-                    <CardDescription className="font-sans">
+                    <CardDescription className="font-sans text-xs md:text-sm">
                       마감이 가까운 설문을 놓치지 마세요.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="px-4 pb-3 pt-0 md:p-6 md:pt-0">
                     {recommendationsLoading ? (
-                      <p className="text-sm text-muted-foreground text-center font-sans">
+                      <p className="text-xs md:text-sm text-muted-foreground text-center font-sans py-2">
                         추천 설문을 불러오는 중입니다.
                       </p>
                     ) : closingSoonSurveys.length > 0 ? (
-                      <div className="space-y-3">
+                      <div className="space-y-2 md:space-y-3">
                         {closingSoonSurveys.map((survey) => {
                           const instructorName = getInstructorNames(survey);
                           return (
@@ -616,37 +616,37 @@ const Index = () => {
                               tabIndex={0}
                               onClick={() => handleSurveyNavigation(survey.id)}
                               onKeyDown={(event) => handleCardKeyDown(event, survey.id)}
-                              className="rounded-lg border bg-muted/40 p-3 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                              className="rounded-lg border bg-muted/40 p-2.5 md:p-3 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                             >
                               <div className="flex items-center gap-2">
-                                <span className="font-medium text-sm text-foreground flex-1 truncate" title={survey.title}>
+                                <span className="font-medium text-xs md:text-sm text-foreground flex-1 truncate" title={survey.title}>
                                   {survey.title}
                                 </span>
-                                {survey.end_date && (
-                                  <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                    마감 {formatDate(survey.end_date)}
-                                  </span>
-                                )}
+                                <div className="shrink-0 scale-90 origin-right">
+                                  {getStatusBadge(survey.status, survey.end_date)}
+                                </div>
                               </div>
                               {instructorName && (
-                                <p className="mt-1 text-xs text-muted-foreground truncate" title={instructorName}>
+                                <p className="mt-0.5 text-[10px] md:text-xs text-muted-foreground truncate" title={instructorName}>
                                   강사: {instructorName}
                                 </p>
                               )}
-                              <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                                <span className="truncate" title={survey.course_name || '기타 과정'}>
+                              <div className="mt-1.5 flex items-center justify-between text-[10px] md:text-xs text-muted-foreground">
+                                <span className="truncate max-w-[60%]" title={survey.course_name || '기타 과정'}>
                                   {survey.course_name || '기타 과정'}
                                 </span>
-                                <div className="shrink-0">
-                                  {getStatusBadge(survey.status, survey.end_date)}
-                                </div>
+                                {survey.end_date && (
+                                  <span className="whitespace-nowrap ml-2">
+                                    마감 {formatDate(survey.end_date)}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           );
                         })}
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground text-center font-sans">
+                      <p className="text-xs md:text-sm text-muted-foreground text-center font-sans py-2">
                         마감이 임박한 설문이 없습니다.
                       </p>
                     )}
