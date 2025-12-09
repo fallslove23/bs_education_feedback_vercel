@@ -135,7 +135,7 @@ export const SurveysRepository = {
     if (filters.year) query = query.eq("education_year", filters.year);
     if (filters.courseName) query = query.eq("course_name", filters.courseName);
     if (filters.sessionId) query = query.eq("session_id", filters.sessionId);
-    
+
     // 상태 필터링 개선
     if (filters.status) {
       if (filters.status === "scheduled") {
@@ -144,10 +144,9 @@ export const SurveysRepository = {
           .in("status", ["active", "public"])
           .gt("start_date", new Date().toISOString());
       } else if (filters.status === "expired") {
-        // 종료: active/public 상태이면서 종료 시간이 과거
-        query = query
-          .in("status", ["active", "public"])
-          .lt("end_date", new Date().toISOString());
+        const now = new Date().toISOString();
+        // 종료: completed 상태 이거나 (active/public 상태이면서 종료 시간이 과거)
+        query = query.or(`status.eq.completed,and(status.in.(active,public),end_date.lt.${now})`);
       } else {
         // 일반 상태는 그대로
         query = query.eq("status", filters.status);
@@ -296,7 +295,7 @@ export const SurveysRepository = {
     for (const id of ids) {
       try {
         await this.duplicateSurvey(id);
-      } catch {}
+      } catch { }
     }
   },
 
