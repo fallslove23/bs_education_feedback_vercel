@@ -338,7 +338,7 @@ function AppContent() {
         />
 
         <Route
-          path="/dashboard/instructor-details/:instructorId"
+          path="/dashboard/instructors/:instructorId"
           element={
             <ProtectedRoute allowedRoles={["admin", "operator", "director", "instructor"]}>
               <DashboardInstructorDetails />
