@@ -148,6 +148,25 @@ const SurveyResults = () => {
   const [instructorNamesCache, setInstructorNamesCache] = useState<Map<string, string>>(new Map());
   const [currentInstructorName, setCurrentInstructorName] = useState<string | null>(null);
 
+  /* State for text search filter */
+  const [searchTerm, setSearchTerm] = useState('');
+  const [overallQuestionId, setOverallQuestionId] = useState<string | null>(null);
+  const [responseScores, setResponseScores] = useState<Record<string, number | null>>({});
+
+  /* ... (search filter effect) ... */
+
+  const filteredAggregates = useMemo(() => {
+    if (!searchTerm.trim()) return aggregates;
+    const lowerTerm = searchTerm.toLowerCase();
+    return aggregates.filter(item =>
+      item.title?.toLowerCase().includes(lowerTerm) ||
+      item.course_name?.toLowerCase().includes(lowerTerm) ||
+      item.instructor_name?.toLowerCase().includes(lowerTerm)
+    );
+  }, [aggregates, searchTerm]);
+
+  /* ... (keep existing useEffects) ... */
+
   const canViewAll = useMemo(
     () => userRoles.includes('admin') || userRoles.includes('operator') || userRoles.includes('director'),
     [userRoles],
@@ -622,6 +641,53 @@ const SurveyResults = () => {
 
     fetchResponses();
   }, [responsePage, selectedSurveyId, toast]);
+
+  /* Fetch Overall Question ID */
+  useEffect(() => {
+    if (!selectedSurveyId) {
+      setOverallQuestionId(null);
+      setResponseScores({});
+      return;
+    }
+    const fetchQuestion = async () => {
+      const { data } = await supabase
+        .from('survey_questions')
+        .select('id')
+        .eq('survey_id', selectedSurveyId)
+        .eq('satisfaction_type', 'overall')
+        .maybeSingle();
+      setOverallQuestionId(data?.id || null);
+    };
+    fetchQuestion();
+  }, [selectedSurveyId]);
+
+  /* Fetch Scores for current page responses */
+  useEffect(() => {
+    const fetchScores = async () => {
+      if (!overallQuestionId || responses.length === 0) return;
+
+      const ids = responses.map(r => r.id);
+      const { data } = await supabase
+        .from('question_answers')
+        .select('response_id, answer_value, answer_text')
+        .eq('question_id', overallQuestionId)
+        .in('response_id', ids);
+
+      if (data) {
+        const scores: Record<string, number | null> = {};
+        data.forEach(row => {
+          let val = row.answer_value;
+          if (val === null && row.answer_text) {
+            const parsed = Number(row.answer_text);
+            if (!Number.isNaN(parsed)) val = parsed;
+          }
+          scores[row.response_id] = typeof val === 'number' ? val : null;
+        });
+        setResponseScores(prev => ({ ...prev, ...scores }));
+      }
+    };
+    fetchScores();
+  }, [responses, overallQuestionId]);
 
   const selectedSurvey = useMemo(
     () => aggregates.find((item) => item.survey_id === selectedSurveyId) ?? null,
@@ -1137,17 +1203,21 @@ const SurveyResults = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>응답 ID</TableHead>
-                          <TableHead>제출 시각</TableHead>
-                          <TableHead>이메일</TableHead>
+                          <TableHead className="w-[120px] text-center">종합 만족도</TableHead>
+                          <TableHead className="text-center">제출 시각</TableHead>
+                          <TableHead className="text-center">참여자</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {responses.map((response) => (
                           <TableRow key={response.id}>
-                            <TableCell className="font-mono text-sm">{response.id}</TableCell>
-                            <TableCell>{new Date(response.submitted_at).toLocaleString('ko-KR')}</TableCell>
-                            <TableCell>{response.respondent_email ?? '익명'}</TableCell>
+                            <TableCell className="text-center font-semibold">
+                              {responseScores[response.id] !== undefined && responseScores[response.id] !== null
+                                ? formatSatisfaction(responseScores[response.id])
+                                : '-'}
+                            </TableCell>
+                            <TableCell className="text-center">{new Date(response.submitted_at).toLocaleString('ko-KR')}</TableCell>
+                            <TableCell className="text-center text-muted-foreground">{response.respondent_email ?? '익명'}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
