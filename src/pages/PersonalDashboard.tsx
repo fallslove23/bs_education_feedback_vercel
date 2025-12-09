@@ -310,7 +310,7 @@ export default function PersonalDashboard({ targetInstructorId }: PersonalDashbo
         <CardHeader>
           <CardTitle className="text-base">조회 조건</CardTitle>
           <CardDescription className="text-xs">
-            연도와 과정을 선택하여 통계를 필터링할 수 있습니다
+            연도와 과목을 선택하여 통계를 필터링할 수 있습니다
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -332,7 +332,7 @@ export default function PersonalDashboard({ targetInstructorId }: PersonalDashbo
               </Select>
             </div>
             <div>
-              <p className="mb-2 text-sm font-medium">과정</p>
+              <p className="mb-2 text-sm font-medium">과목 (세션)</p>
               <Select value={selectedCourse} onValueChange={setSelectedCourse}>
                 <SelectTrigger>
                   <SelectValue placeholder="과정 선택" />
@@ -646,7 +646,7 @@ export default function PersonalDashboard({ targetInstructorId }: PersonalDashbo
                   <TableHeader>
                     <TableRow>
                       <TableHead>설문 제목</TableHead>
-                      <TableHead>과정명(내부)</TableHead>
+                      <TableHead>과목</TableHead>
                       <TableHead>회차</TableHead>
                       <TableHead>강사명</TableHead>
                       <TableHead>상태</TableHead>

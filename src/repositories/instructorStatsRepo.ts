@@ -111,9 +111,16 @@ function parseQuestionStats(value: any): QuestionStat[] {
     const questionText = typeof item?.question_text === 'string' ? item.question_text : '';
     const questionType = typeof item?.question_type === 'string' ? item.question_type : '';
     const satisfactionType = typeof item?.satisfaction_type === 'string' ? item.satisfaction_type : null;
-    const orderIndex = Number.isFinite(item?.order_index) ? Number(item.order_index) : null;
-    const totalAnswers = Number.isFinite(item?.total_answers) ? Number(item.total_answers) : 0;
-    const average = Number.isFinite(item?.average) ? Number(item.average) : null;
+
+    const orderIndexVal = Number(item?.order_index);
+    const orderIndex = (item?.order_index !== null && item?.order_index !== undefined && Number.isFinite(orderIndexVal)) ? orderIndexVal : null;
+
+    const totalAnswersVal = Number(item?.total_answers);
+    const totalAnswers = Number.isFinite(totalAnswersVal) ? totalAnswersVal : 0;
+
+    const averageVal = Number(item?.average);
+    const average = (item?.average !== null && item?.average !== undefined && Number.isFinite(averageVal)) ? averageVal : null;
+
     const ratingDistribution = parseDistribution(item?.rating_distribution);
     const textAnswers = parseTextArray(item?.text_answers);
 
