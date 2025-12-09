@@ -245,7 +245,7 @@ export default function SurveyManagementV2() {
   const [error, setError] = useState<string | null>(null);
 
   const [availableYears, setAvailableYears] = useState<number[]>([]);
-  const [availableSessions, setAvailableSessions] = useState<{ value: string; label: string }[]>([]);
+  const [availableCourses, setAvailableCourses] = useState<string[]>([]);
   const [availablePrograms, setAvailablePrograms] = useState<string[]>([]);  // 빠른 생성용 프로그램 목록
   const [templates, setTemplates] = useState<TemplateLite[]>([]);
 
@@ -326,8 +326,8 @@ export default function SurveyManagementV2() {
       const items: { label: string; value: string }[] = [];
       if (normalized.year) items.push({ label: "교육 연도", value: `${normalized.year}년` });
       if (normalized.sessionId) {
-        const session = availableSessions.find(s => s.value === normalized.sessionId);
-        if (session) items.push({ label: "세션(과정)", value: session.label });
+        // Session ID is deprecated for display label lookup, showing ID if stuck
+        items.push({ label: "세션", value: "선택됨" });
       } else if (normalized.courseName) {
         items.push({ label: "과정", value: normalized.courseName });
       }
@@ -403,6 +403,7 @@ export default function SurveyManagementV2() {
         if (normalized.year) params.set("year", String(normalized.year));
         if (normalized.status) params.set("status", normalized.status);
         if (normalized.sessionId) params.set("session", normalized.sessionId);
+        if (normalized.courseName) params.set("course", normalized.courseName);
         if (normalized.q) params.set("q", normalized.q);
         if (sortBy) params.set("sortBy", sortBy);
         if (sortDir) params.set("sortDir", sortDir);
@@ -549,6 +550,7 @@ export default function SurveyManagementV2() {
     if (filters.year) p.set("year", String(filters.year));
     if (filters.status) p.set("status", filters.status);
     if (filters.sessionId) p.set("session", filters.sessionId);
+    if (filters.courseName) p.set("course", filters.courseName);
     if (filters.q) p.set("q", filters.q);
     if (sortBy) p.set("sortBy", sortBy);
     if (sortDir) p.set("sortDir", sortDir);
@@ -603,49 +605,18 @@ export default function SurveyManagementV2() {
     setError(paginationHook.error);
   }, [paginationHook.data, paginationHook.pagination.total, paginationHook.pagination.totalPages, paginationHook.loading, paginationHook.error]);
 
-  const loadSessions = async (year: number | null) => {
+  const loadCourses = async (year: number | null) => {
     try {
-      const { data, error } = await (supabase as any).rpc('rpc_session_filter_options', {
-        p_year: year
-      });
+      const courses = await SurveysRepository.getAvailableCourseNames(year);
+      setAvailableCourses(courses);
 
-      let sessionOptions: Array<{ value: string; label: string }> = [];
-
-      if (!error && Array.isArray(data) && data.length > 0) {
-        sessionOptions = (data || []).map((item: any) => ({ value: item.value, label: item.label }));
-      } else {
-        console.warn('rpc_session_filter_options returned empty. Falling back to program_sessions_v1');
-        // Fallback: query program_sessions_v1
-        let query = (supabase as any)
-          .from('program_sessions_v1')
-          .select('session_id, program, turn, year')
-          .order('program', { ascending: true })
-          .order('turn', { ascending: true });
-
-        // year가 null이 아닐 때만 필터링
-        if (year !== null) {
-          query = query.eq('year', year);
-        }
-
-        const { data: sess, error: sessErr } = await query;
-
-        if (!sessErr) {
-          sessionOptions = (sess || []).map((row: any) => ({
-            value: row.session_id,
-            label: `${row.year}년 ${row.turn}차 ${row.program}`,
-          }));
-        }
-      }
-
-      setAvailableSessions(sessionOptions);
-
-      // 현재 선택된 세션이 목록에 없으면 초기화
-      if (filters.sessionId && !sessionOptions.some((s: any) => s.value === filters.sessionId)) {
-        setFilters((p) => ({ ...p, sessionId: null }));
+      // 만약 현재 선택된 코스가 목록에 없으면 초기화? (선택적)
+      if (filters.courseName && !courses.includes(filters.courseName)) {
+        // 상황에 따라 초기화하거나 유지. 유지하는 편이 나음(검색 중일 수 있으므로)
       }
     } catch (e) {
-      console.error('Failed to load sessions:', e);
-      setAvailableSessions([]);
+      console.error('Failed to load courses:', e);
+      setAvailableCourses([]);
     }
   };
 
@@ -668,12 +639,12 @@ export default function SurveyManagementV2() {
       // 이미 1페이지라면 바로 데이터 갱신 (필터 적용)
       paginationHook.goToPage(1);
     }
-  }, [filters.year, filters.status, filters.q, filters.sessionId, sortBy, sortDir]);
+  }, [filters.year, filters.status, filters.q, filters.sessionId, filters.courseName, sortBy, sortDir]);
 
   useEffect(() => {
     paginationHook.goToPage(currentPage);
   }, [currentPage]);
-  useEffect(() => { loadSessions(filters.year); }, [filters.year]);
+  useEffect(() => { loadCourses(filters.year); }, [filters.year]);
   useEffect(() => { loadPrograms(); }, []);
   useEffect(() => { loadData(); }, []); // 초기 로드 시 availableYears 설정
   useEffect(() => { (async () => setTemplates(await SurveysRepository.listTemplates()))(); }, []);
@@ -748,9 +719,9 @@ export default function SurveyManagementV2() {
   const handleFilterChange = (key: keyof SurveyFilters, value: string) => {
     const v = value === "all" ? null : key === "year" ? (value ? parseInt(value) : null) : (value as any);
 
-    // 연도 변경 시 세션 필터 초기화 (연도 필터가 변경되면 기존 세션 ID는 유효하지 않을 수 있음)
+    // 연도 변경 시 과정 필터 초기화 (연도 필터가 변경되면 기존 과정명은 유효하지 않을 수 있음)
     if (key === 'year') {
-      setFilters((prev) => ({ ...prev, [key]: v, sessionId: null }));
+      setFilters((prev) => ({ ...prev, [key]: v, courseName: null, sessionId: null }));
     } else {
       setFilters((prev) => ({ ...prev, [key]: v }));
     }
@@ -1125,12 +1096,12 @@ export default function SurveyManagementV2() {
                 </Select>
               </div>
               <div className="space-y-1.5 sm:space-y-2">
-                <label className="text-xs sm:text-sm font-medium">세션(과정)</label>
-                <Select value={filters.sessionId || "all"} onValueChange={(v) => handleFilterChange("sessionId", v)}>
+                <label className="text-xs sm:text-sm font-medium">과정</label>
+                <Select value={filters.courseName || "all"} onValueChange={(v) => handleFilterChange("courseName", v)}>
                   <SelectTrigger className="h-9 sm:h-10 text-xs sm:text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent className="z-50 bg-background border shadow-md">
-                    <SelectItem value="all">모든 세션</SelectItem>
-                    {availableSessions.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                    <SelectItem value="all">모든 과정</SelectItem>
+                    {availableCourses.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
