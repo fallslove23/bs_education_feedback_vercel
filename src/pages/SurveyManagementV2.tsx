@@ -607,13 +607,10 @@ export default function SurveyManagementV2() {
 
   const loadCourses = async (year: number | null) => {
     try {
-      const courses = await SurveysRepository.getAvailableCourseNames(year);
-      setAvailableCourses(courses);
-
-      // 만약 현재 선택된 코스가 목록에 없으면 초기화? (선택적)
-      if (filters.courseName && !courses.includes(filters.courseName)) {
-        // 상황에 따라 초기화하거나 유지. 유지하는 편이 나음(검색 중일 수 있으므로)
-      }
+      // 정규 과정(Program) 목록만 불러와서 필터 깔끔하게 유지
+      const programs = await SurveysRepository.listPrograms();
+      const names = programs.map(p => p.name).sort();
+      setAvailableCourses(names);
     } catch (e) {
       console.error('Failed to load courses:', e);
       setAvailableCourses([]);
