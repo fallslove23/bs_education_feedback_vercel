@@ -661,7 +661,13 @@ export default function SurveyManagementV2() {
   };
 
   useEffect(() => {
-    paginationHook.refresh();
+    // 필터/정렬 변경 시 1페이지로 리셋
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    } else {
+      // 이미 1페이지라면 바로 데이터 갱신 (필터 적용)
+      paginationHook.goToPage(1);
+    }
   }, [filters.year, filters.status, filters.q, filters.sessionId, sortBy, sortDir]);
 
   useEffect(() => {
