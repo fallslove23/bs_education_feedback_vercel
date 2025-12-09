@@ -35,7 +35,7 @@ const toFixedOrZero = (value: number | null | undefined, digits = 1) => {
   if (value === null || value === undefined) return 0;
   if (typeof value !== 'number') return 0;
   if (!Number.isFinite(value) || Number.isNaN(value)) return 0;
-  
+
   const rounded = Number(value.toFixed(digits));
   return Number.isFinite(rounded) && !Number.isNaN(rounded) ? rounded : 0;
 };
@@ -52,7 +52,7 @@ const CourseReports: React.FC = () => {
   return (
     <PageErrorBoundary pageName="Course Reports">
       <CourseReportsContent />
-    </PageErrorBoundary>  
+    </PageErrorBoundary>
   );
 };
 
@@ -61,7 +61,7 @@ const CourseReportsContent: React.FC = () => {
   const { toast } = useToast();
   const { userRoles } = useAuth();
   const isMobile = useIsMobile();
-  
+
   // Use new filter state hook with URL synchronization
   const { filters, updateFilter } = useFilterState({
     defaultYear: CURRENT_YEAR,
@@ -101,7 +101,7 @@ const CourseReportsContent: React.FC = () => {
       const loadDashboardCounts = async () => {
         setLoadingCounts(true);
         console.log('🔍 Fetching dashboard counts:', { year: filters.year || CURRENT_YEAR, sessionKey: selectedSessionKey || null });
-        
+
         try {
           const counts = await fetchDashboardCounts(
             filters.year || CURRENT_YEAR,
@@ -180,7 +180,7 @@ const CourseReportsContent: React.FC = () => {
     const operationalOnlyInstructors = new Set([
       '1a72370e-ec17-4338-b501-aed48a7ace5b', // 최효동
     ]);
-    
+
     const result = instructorStats
       .filter((stat) => !operationalOnlyInstructors.has(stat.instructorId ?? ''))
       .map((stat) => ({
@@ -199,7 +199,7 @@ const CourseReportsContent: React.FC = () => {
     const operationalOnlyInstructors = new Set([
       '1a72370e-ec17-4338-b501-aed48a7ace5b', // 최효동
     ]);
-    
+
     return previousInstructorStats
       .filter((stat) => !operationalOnlyInstructors.has(stat.instructorId ?? ''))
       .map((stat) => ({
@@ -224,7 +224,7 @@ const CourseReportsContent: React.FC = () => {
 
   const handleInstructorClick = async (instructorIdValue: string) => {
     if (!instructorIdValue) return;
-    
+
     try {
       // 1. surveys 테이블에서 직접 instructor_id로 조회
       let baseQuery = supabase
@@ -238,7 +238,7 @@ const CourseReportsContent: React.FC = () => {
       }
 
       const surveyFromMain = baseQuery.eq('instructor_id', instructorIdValue);
-      
+
       // 2. survey_sessions를 통한 조회
       const surveyFromSessions = supabase
         .from('survey_sessions')
@@ -252,16 +252,16 @@ const CourseReportsContent: React.FC = () => {
       ]);
 
       // 결과 합치기
-      const allSurveys: Array<{id: string, title: string, created_at: string}> = [];
-      
+      const allSurveys: Array<{ id: string, title: string, created_at: string }> = [];
+
       if (mainResult.data && mainResult.data.length > 0) {
-        allSurveys.push(...mainResult.data.map(s => ({ 
-          id: s.id, 
+        allSurveys.push(...mainResult.data.map(s => ({
+          id: s.id,
           title: s.title,
-          created_at: s.created_at 
+          created_at: s.created_at
         })));
       }
-      
+
       if (sessionsResult.data && sessionsResult.data.length > 0) {
         const sessionSurveys = sessionsResult.data
           .map(ss => ss.surveys)
@@ -273,12 +273,12 @@ const CourseReportsContent: React.FC = () => {
             if (selectedSessionKey && survey.session_id !== selectedSessionKey) return false;
             return true;
           })
-          .map(s => ({ 
-            id: (s as any).id, 
+          .map(s => ({
+            id: (s as any).id,
             title: (s as any).title,
             created_at: (s as any).created_at
           }));
-        
+
         allSurveys.push(...sessionSurveys);
       }
 
@@ -362,7 +362,7 @@ const CourseReportsContent: React.FC = () => {
     }
   };
 
-  const handlePDFExport = () => {
+  const handlePDFExport = async () => {
     if (!hasExportable) {
       toast({
         title: '내보낼 데이터가 없습니다.',
@@ -373,7 +373,7 @@ const CourseReportsContent: React.FC = () => {
     }
 
     try {
-      generateCourseReportPDF({
+      await generateCourseReportPDF({
         reportTitle: `${currentCourseName} 결과 보고서`,
         year: filters.year || CURRENT_YEAR,
         round: undefined,
@@ -418,7 +418,7 @@ const CourseReportsContent: React.FC = () => {
           선택한 세션 조건에서 집계된 응답이 없어 요약 지표가 0으로 표시됩니다.
         </div>
       )}
-      
+
       <CourseStatsCards
         key={`${selectedSessionKey || 'all'}-${filters.year || CURRENT_YEAR}`}
         totalSurveys={dashboardCounts?.survey_count || 0}
@@ -439,30 +439,30 @@ const CourseReportsContent: React.FC = () => {
           <CardContent className="h-[240px] sm:h-[280px] lg:h-[320px] p-2 sm:p-4">
             <ChartErrorBoundary fallbackDescription="만족도 차트를 표시할 수 없습니다.">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart 
+                <BarChart
                   data={satisfactionChartData}
                   layout="vertical"
-                  margin={{ 
-                    top: 5, 
-                    right: isMobile ? 5 : 10, 
-                    left: isMobile ? 10 : 5, 
-                    bottom: 5 
+                  margin={{
+                    top: 5,
+                    right: isMobile ? 5 : 10,
+                    left: isMobile ? 10 : 5,
+                    bottom: 5
                   }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                  <XAxis 
-                    type="number" 
+                  <XAxis
+                    type="number"
                     domain={[0, 10]}
                     tick={{ fontSize: isMobile ? 9 : 10, fill: 'hsl(var(--muted-foreground))' }}
                     tickFormatter={(value) => `${value}점`}
                   />
-                  <YAxis 
-                    type="category" 
+                  <YAxis
+                    type="category"
                     dataKey="name"
                     tick={{ fontSize: isMobile ? 9 : 9, fill: 'hsl(var(--foreground))' }}
                     width={isMobile ? 70 : 80}
                   />
-                  <Tooltip 
+                  <Tooltip
                     formatter={(value: number) => [`${value.toFixed(1)}점`, '만족도']}
                     contentStyle={{
                       backgroundColor: 'hsl(var(--background))',
@@ -473,14 +473,14 @@ const CourseReportsContent: React.FC = () => {
                     }}
                     cursor={{ fill: 'hsl(var(--accent))', opacity: 0.1 }}
                   />
-                  <Bar 
-                    dataKey="value" 
+                  <Bar
+                    dataKey="value"
                     radius={[0, 8, 8, 0]}
                     maxBarSize={40}
                   >
                     {satisfactionChartData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
+                      <Cell
+                        key={`cell-${index}`}
                         fill={entry.color}
                         className="transition-opacity hover:opacity-80"
                       />
@@ -523,9 +523,8 @@ const CourseReportsContent: React.FC = () => {
                   <div className="text-xs sm:text-sm text-muted-foreground">종합 만족도</div>
                   {satisfactionChange && (
                     <div
-                      className={`text-xs font-medium ${
-                        satisfactionChange.diff >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}
+                      className={`text-xs font-medium ${satisfactionChange.diff >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}
                     >
                       {satisfactionChange.diff >= 0 ? '▲' : '▼'} {Math.abs(satisfactionChange.diff).toFixed(1)}점
                     </div>
@@ -619,20 +618,20 @@ const CourseReportsContent: React.FC = () => {
             </div>
             {dashboardCounts && (
               <div className="flex flex-wrap items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleShareReport} 
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleShareReport}
                   className="bg-white/70"
                   disabled={!hasExportable}
                   title={!hasExportable ? '내보낼 데이터가 없습니다' : ''}
                 >
                   <Share2 className="mr-2 h-4 w-4" /> 공유하기
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handlePDFExport} 
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePDFExport}
                   className="bg-white/70"
                   disabled={!hasExportable}
                   title={!hasExportable ? '내보낼 데이터가 없습니다' : ''}
