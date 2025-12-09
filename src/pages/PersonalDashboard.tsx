@@ -358,6 +358,7 @@ export default function PersonalDashboard({ targetInstructorId }: PersonalDashbo
                       className="text-xs"
                       tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isMobile ? 10 : 12 }}
                       width={isMobile ? 40 : 60}
+                      domain={[0, 10]}
                     />
                     <Tooltip
                       contentStyle={{
