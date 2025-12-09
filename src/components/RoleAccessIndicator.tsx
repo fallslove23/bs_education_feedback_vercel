@@ -115,14 +115,14 @@ export function RoleAccessIndicator() {
 
   // 사용자가 접근 가능한 페이지 필터링
   const getAccessiblePages = () => {
-    return pagePermissions.filter(page => 
+    return pagePermissions.filter(page =>
       page.requiredRoles.some(role => userRoles.includes(role))
     );
   };
 
   // 사용자가 접근 불가능한 페이지 필터링
   const getInaccessiblePages = () => {
-    return pagePermissions.filter(page => 
+    return pagePermissions.filter(page =>
       !page.requiredRoles.some(role => userRoles.includes(role))
     );
   };
@@ -130,19 +130,19 @@ export function RoleAccessIndicator() {
   // 역할별 색상
   const getRoleColor = (role: string) => {
     const colors = {
-      admin: 'bg-red-100 text-red-800 border-red-200',
-      operator: 'bg-blue-100 text-blue-800 border-blue-200',
-      director: 'bg-purple-100 text-purple-800 border-purple-200',
-      instructor: 'bg-green-100 text-green-800 border-green-200'
+      admin: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-200 dark:border-red-800',
+      operator: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-200 dark:border-blue-800',
+      director: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/50 dark:text-purple-200 dark:border-purple-800',
+      instructor: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-200 dark:border-green-800'
     };
-    return colors[role as keyof typeof colors] || 'bg-gray-100 text-gray-800 border-gray-200';
+    return colors[role as keyof typeof colors] || 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700';
   };
 
   // 카테고리별 색상
   const getCategoryColor = (category: string) => {
     const colors = {
       analytics: 'border-l-chart-1',
-      management: 'border-l-chart-2', 
+      management: 'border-l-chart-2',
       system: 'border-l-chart-3'
     };
     return colors[category as keyof typeof colors] || 'border-l-border';
@@ -156,9 +156,9 @@ export function RoleAccessIndicator() {
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button 
-          variant="outline" 
-          size="sm" 
+        <Button
+          variant="outline"
+          size="sm"
           className="flex items-center gap-2 bg-primary/5 border-primary/20 hover:bg-primary/10"
         >
           <Shield className="h-4 w-4 text-primary" />
@@ -194,13 +194,13 @@ export function RoleAccessIndicator() {
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="flex items-center gap-1">
-                <Eye className="h-3 w-3 text-green-600" />
-                <span className="text-green-600 font-medium">접근가능:</span>
+                <Eye className="h-3 w-3 text-green-600 dark:text-green-400" />
+                <span className="text-green-600 dark:text-green-400 font-medium">접근가능:</span>
                 <span>{accessiblePages.length}개</span>
               </div>
               <div className="flex items-center gap-1">
-                <EyeOff className="h-3 w-3 text-red-600" />
-                <span className="text-red-600 font-medium">제한:</span>
+                <EyeOff className="h-3 w-3 text-red-600 dark:text-red-400" />
+                <span className="text-red-600 dark:text-red-400 font-medium">제한:</span>
                 <span>{inaccessiblePages.length}개</span>
               </div>
             </div>
@@ -209,14 +209,14 @@ export function RoleAccessIndicator() {
           {/* 접근 가능한 페이지 */}
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <Eye className="h-4 w-4 text-green-600" />
-              <span className="font-medium text-green-600">접근 가능한 페이지</span>
+              <Eye className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <span className="font-medium text-green-600 dark:text-green-400">접근 가능한 페이지</span>
             </div>
             <div className="space-y-2 max-h-32 overflow-y-auto">
               {accessiblePages.map((page) => (
-                <div 
+                <div
                   key={page.path}
-                  className={`border-l-2 ${getCategoryColor(page.category)} bg-green-50 p-2 rounded-r text-xs`}
+                  className={`border-l-2 ${getCategoryColor(page.category)} bg-green-50 dark:bg-green-950/30 p-2 rounded-r text-xs`}
                 >
                   <div className="font-medium">{page.title}</div>
                   <div className="text-muted-foreground">{page.description}</div>
@@ -229,19 +229,19 @@ export function RoleAccessIndicator() {
           {inaccessiblePages.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <EyeOff className="h-4 w-4 text-red-600" />
-                <span className="font-medium text-red-600">접근 제한 페이지</span>
+                <EyeOff className="h-4 w-4 text-red-600 dark:text-red-400" />
+                <span className="font-medium text-red-600 dark:text-red-400">접근 제한 페이지</span>
               </div>
               <div className="space-y-2 max-h-24 overflow-y-auto">
                 {inaccessiblePages.slice(0, 3).map((page) => (
-                  <div 
+                  <div
                     key={page.path}
-                    className={`border-l-2 ${getCategoryColor(page.category)} bg-red-50 p-2 rounded-r text-xs opacity-75`}
+                    className={`border-l-2 ${getCategoryColor(page.category)} bg-red-50 dark:bg-red-950/30 p-2 rounded-r text-xs opacity-75`}
                   >
-                    <div className="font-medium text-gray-600">{page.title}</div>
+                    <div className="font-medium text-gray-600 dark:text-gray-400">{page.title}</div>
                     <div className="flex gap-1 mt-1">
                       {page.requiredRoles.map((role) => (
-                        <span key={role} className="text-xs text-red-600 bg-red-100 px-1 py-0.5 rounded">
+                        <span key={role} className="text-xs text-red-600 bg-red-100 dark:bg-red-900/40 dark:text-red-300 px-1 py-0.5 rounded">
                           {role}
                         </span>
                       ))}

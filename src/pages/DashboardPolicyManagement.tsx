@@ -302,12 +302,12 @@ const DashboardPolicyManagement = () => {
   // 역할별 색상
   const getRoleColor = (role: string) => {
     const colors = {
-      admin: 'bg-red-100 text-red-800',
-      operator: 'bg-blue-100 text-blue-800',
-      director: 'bg-purple-100 text-purple-800',
-      instructor: 'bg-green-100 text-green-800'
+      admin: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200',
+      operator: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200',
+      director: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200',
+      instructor: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
     };
-    return colors[role as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[role as keyof typeof colors] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
   };
 
   // 카테고리별 색상
@@ -366,15 +366,15 @@ const DashboardPolicyManagement = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div>
-                <span className="font-medium text-green-600">접근 가능:</span>
+                <span className="font-medium text-green-600 dark:text-green-400">접근 가능:</span>
                 <span className="ml-2">{accessiblePages.length}개 페이지</span>
               </div>
               <div>
-                <span className="font-medium text-red-600">접근 제한:</span>
+                <span className="font-medium text-red-600 dark:text-red-400">접근 제한:</span>
                 <span className="ml-2">{inaccessiblePages.length}개 페이지</span>
               </div>
               <div>
-                <span className="font-medium text-blue-600">전체:</span>
+                <span className="font-medium text-blue-600 dark:text-blue-400">전체:</span>
                 <span className="ml-2">{pagePermissions.length}개 페이지</span>
               </div>
             </div>
@@ -520,14 +520,14 @@ const DashboardPolicyManagement = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Eye className="h-5 w-5 text-green-600" />
+                    <Eye className="h-5 w-5 text-green-600 dark:text-green-400" />
                     접근 가능한 페이지 ({accessiblePages.length}개)
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-3">
                     {accessiblePages.map((page) => (
-                      <div key={page.path} className={`p-4 border-l-4 rounded-lg bg-green-50 ${getCategoryColor(page.category)}`}>
+                      <div key={page.path} className={`p-4 border-l-4 rounded-lg bg-green-50 dark:bg-green-950/20 ${getCategoryColor(page.category)}`}>
                         <div className="flex items-center justify-between">
                           <div>
                             <h4 className="font-medium text-sm">{page.title}</h4>
@@ -541,7 +541,7 @@ const DashboardPolicyManagement = () => {
                               ))}
                             </div>
                           </div>
-                          <CheckCircle className="h-5 w-5 text-green-600" />
+                          <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
                         </div>
                       </div>
                     ))}
@@ -554,14 +554,14 @@ const DashboardPolicyManagement = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <EyeOff className="h-5 w-5 text-red-600" />
+                      <EyeOff className="h-5 w-5 text-red-600 dark:text-red-400" />
                       접근 제한된 페이지 ({inaccessiblePages.length}개)
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid gap-3">
                       {inaccessiblePages.map((page) => (
-                        <div key={page.path} className={`p-4 border-l-4 rounded-lg bg-red-50 ${getCategoryColor(page.category)}`}>
+                        <div key={page.path} className={`p-4 border-l-4 rounded-lg bg-red-50 dark:bg-red-950/20 ${getCategoryColor(page.category)}`}>
                           <div className="flex items-center justify-between">
                             <div>
                               <h4 className="font-medium text-sm">{page.title}</h4>
@@ -575,7 +575,7 @@ const DashboardPolicyManagement = () => {
                                 ))}
                               </div>
                             </div>
-                            <AlertTriangle className="h-5 w-5 text-red-600" />
+                            <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
                           </div>
                         </div>
                       ))}
@@ -627,7 +627,7 @@ const DashboardPolicyManagement = () => {
                                     <div className="flex items-center gap-2">
                                       <span className="text-sm text-muted-foreground">Roles:</span>
                                       {policy.roles.split(',').map(r => (
-                                        <Badge key={r} variant="outline" className={r.includes('public') || r.includes('anon') ? 'border-red-200 bg-red-50 text-red-700' : ''}>
+                                        <Badge key={r} variant="outline" className={r.includes('public') || r.includes('anon') ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400' : ''}>
                                           {r}
                                         </Badge>
                                       ))}
