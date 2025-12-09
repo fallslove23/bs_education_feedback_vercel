@@ -747,7 +747,14 @@ export default function SurveyManagementV2() {
 
   const handleFilterChange = (key: keyof SurveyFilters, value: string) => {
     const v = value === "all" ? null : key === "year" ? (value ? parseInt(value) : null) : (value as any);
-    setFilters((prev) => ({ ...prev, [key]: v }));
+
+    // 연도 변경 시 세션 필터 초기화 (연도 필터가 변경되면 기존 세션 ID는 유효하지 않을 수 있음)
+    if (key === 'year') {
+      setFilters((prev) => ({ ...prev, [key]: v, sessionId: null }));
+    } else {
+      setFilters((prev) => ({ ...prev, [key]: v }));
+    }
+
     setCurrentPage(1);
     setSelected(new Set());
   };
