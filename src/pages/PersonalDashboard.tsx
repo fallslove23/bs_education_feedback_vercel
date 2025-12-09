@@ -14,7 +14,7 @@ import {
   Bar,
   Legend,
 } from 'recharts';
-import { Award, BarChart3, TrendingUp, Users, Download, HelpCircle } from 'lucide-react';
+import { Award, BarChart3, TrendingUp, Users, Download, HelpCircle, ListChecks } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useInstructorStats } from '@/hooks/useInstructorStats';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -34,8 +34,23 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { ChartEmptyState } from '@/components/charts';
 import { getCombinedRecordMetrics } from '@/utils/surveyStats';
+import { supabase } from '@/integrations/supabase/client';
 
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 const RATING_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6'];
@@ -148,6 +163,11 @@ export default function PersonalDashboard({ targetInstructorId }: PersonalDashbo
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [selectedCourse, setSelectedCourse] = useState<string>('all');
 
+  // Source Surveys State
+  const [showSourceSurveys, setShowSourceSurveys] = useState(false);
+  const [sourceSurveys, setSourceSurveys] = useState<any[]>([]);
+  const [sourceSurveysLoading, setSourceSurveysLoading] = useState(false);
+
   const filters = useMemo(() => ({
     year: selectedYear === 'all' ? 'all' as const : Number(selectedYear),
     round: 'all' as const,
@@ -161,7 +181,32 @@ export default function PersonalDashboard({ targetInstructorId }: PersonalDashbo
     enabled: Boolean(instructorId),
   });
 
+  const loadSourceSurveys = async (ids: string[]) => {
+    if (ids.length === 0) {
+      setSourceSurveys([]);
+      return;
+    }
+    setSourceSurveysLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('surveys')
+        .select('*')
+        .in('id', ids)
+        .order('created_at', { ascending: false });
 
+      if (error) throw error;
+      setSourceSurveys(data || []);
+    } catch (error) {
+      console.error('Error loading source surveys:', error);
+      toast({
+        title: "설문 목록 로딩 실패",
+        description: "설문 데이터를 불러오는 중 오류가 발생했습니다.",
+        variant: "destructive"
+      });
+    } finally {
+      setSourceSurveysLoading(false);
+    }
+  };
 
   const handleDownload = useCallback(() => {
     const csvRows = [
@@ -235,6 +280,19 @@ export default function PersonalDashboard({ targetInstructorId }: PersonalDashbo
           )}
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const allIds = Array.from(new Set(stats.filteredRecords.flatMap(r => r.surveyIds)));
+              loadSourceSurveys(allIds);
+              setShowSourceSurveys(true);
+            }}
+            disabled={!stats.hasData}
+          >
+            <ListChecks className="h-4 w-4 mr-2" />
+            집계 데이터 보기
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -563,6 +621,75 @@ export default function PersonalDashboard({ targetInstructorId }: PersonalDashbo
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Source Surveys Dialog */}
+      <Dialog open={showSourceSurveys} onOpenChange={setShowSourceSurveys}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>통계 집계 대상 설문 목록</DialogTitle>
+            <CardDescription>
+              현재 통계 화면에 반영된 원본 설문 데이터입니다. 목록에 없는 설문은 통계에 포함되지 않았습니다.
+            </CardDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto min-h-0 py-4">
+            {sourceSurveysLoading ? (
+              <div className="flex justify-center p-8">
+                <p>데이터를 불러오는 중...</p>
+              </div>
+            ) : sourceSurveys.length === 0 ? (
+              <div className="text-center p-8 text-muted-foreground">
+                집계된 설문 데이터가 없습니다.
+              </div>
+            ) : (
+              <div className="border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>설문 제목</TableHead>
+                      <TableHead>과정명(내부)</TableHead>
+                      <TableHead>회차</TableHead>
+                      <TableHead>강사명</TableHead>
+                      <TableHead>상태</TableHead>
+                      <TableHead>생성일</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sourceSurveys.map((survey) => (
+                      <TableRow key={survey.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex flex-col">
+                            <span>{survey.title}</span>
+                            <span className="text-xs text-muted-foreground sm:hidden">
+                              {survey.education_year}-{survey.education_round}차
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-normal">
+                            {survey.course_name}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          {survey.education_year}년 {survey.education_round}차
+                        </TableCell>
+                        <TableCell>{survey.instructor_name || '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant={survey.status === 'active' ? 'default' : 'secondary'}>
+                            {survey.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-xs">
+                          {new Date(survey.created_at).toLocaleDateString()}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div >
   );
 }
