@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { DashboardLayout } from '@/components/layouts';
-import { Mail, CheckCircle, XCircle, Clock, RefreshCw, Clipboard, Download, ListChecks, FileText, Users, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Mail, CheckCircle, XCircle, Clock, RefreshCw, Clipboard, Download, ListChecks, FileText, Users, AlertCircle, CheckCircle2, Filter, Calendar as CalendarIcon, BarChart3 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format, startOfMonth, endOfMonth, subMonths, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { ko } from 'date-fns/locale';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 interface EmailLog {
   id: string;
@@ -42,6 +49,12 @@ const DashboardEmailLogs = () => {
   const [surveyDetails, setSurveyDetails] = useState<Record<string, SurveyDetails>>({});
   const [autoEmailEnabled, setAutoEmailEnabled] = useState(true);
   const [toggleLoading, setToggleLoading] = useState(false);
+
+  // Filters
+  const [selectedSurvey, setSelectedSurvey] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [dateRange, setDateRange] = useState<Date | undefined>(undefined);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const canViewLogs = userRoles.includes('admin') || userRoles.includes('operator');
 
@@ -107,12 +120,12 @@ const DashboardEmailLogs = () => {
         .eq('key', 'auto_email_enabled');
 
       if (error) throw error;
-      
+
       setAutoEmailEnabled(enabled);
       toast({
         title: enabled ? '자동 이메일 전송 활성화' : '자동 이메일 전송 비활성화',
-        description: enabled 
-          ? '설문 종료 시 자동으로 이메일이 발송됩니다.' 
+        description: enabled
+          ? '설문 종료 시 자동으로 이메일이 발송됩니다.'
           : '자동 이메일 전송이 중지되었습니다.',
       });
     } catch (error) {
@@ -130,7 +143,6 @@ const DashboardEmailLogs = () => {
   const fetchEmailLogs = async () => {
     try {
       setLoading(true);
-      // Use RPC function that includes proper permission checks
       const { data, error } = await supabase
         .rpc('get_email_logs' as any);
 
@@ -153,10 +165,9 @@ const DashboardEmailLogs = () => {
   const fetchAllowlistEmails = async () => {
     try {
       setAllowlistLoading(true);
-      // 병렬로 수집: 강사 이메일 + 역할 기반 프로필 이메일 + 최근 로그 수신자
       const [instructorsRes, rolesRes] = await Promise.all([
         supabase.from('instructors').select('email').not('email', 'is', null),
-        supabase.from('user_roles').select('user_id, role').in('role', ['admin','operator','director','instructor'] as any)
+        supabase.from('user_roles').select('user_id, role').in('role', ['admin', 'operator', 'director', 'instructor'] as any)
       ]);
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -174,7 +185,6 @@ const DashboardEmailLogs = () => {
         });
       }
 
-      // 최근 이메일 로그에 있는 수신자까지 포함
       emailLogs.forEach((log) => (log.recipients || []).forEach((e) => {
         if (e && emailRegex.test(e)) set.add(String(e).toLowerCase());
       }));
@@ -213,11 +223,94 @@ const DashboardEmailLogs = () => {
     }
   }, [canViewLogs]);
 
+  // Derived state for filtered logs
+  const filteredLogs = useMemo(() => {
+    return emailLogs.filter(log => {
+      // Survey Filter
+      if (selectedSurvey !== 'all' && log.survey_id !== selectedSurvey) return false;
+
+      // Status Filter
+      if (selectedStatus !== 'all' && log.status !== selectedStatus) return false;
+
+      // Date Filter
+      if (dateRange) {
+        const logDate = new Date(log.created_at);
+        const start = startOfDay(dateRange);
+        const end = endOfDay(dateRange);
+        if (!(logDate >= start && logDate <= end)) return false;
+      }
+
+      // Search Filter
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        const surveyInfo = surveyDetails[log.survey_id];
+        const titleMatch = surveyInfo?.title?.toLowerCase().includes(term);
+        const recipientMatch = log.recipients.some(r => r.toLowerCase().includes(term));
+        if (!titleMatch && !recipientMatch) return false;
+      }
+
+      return true;
+    });
+  }, [emailLogs, selectedSurvey, selectedStatus, dateRange, searchTerm, surveyDetails]);
+
+  // Monthly stats for chart
+  const monthlyStats = useMemo(() => {
+    const stats: Record<string, { sent: number; failed: number }> = {};
+
+    // Initialize last 6 months
+    for (let i = 5; i >= 0; i--) {
+      const date = subMonths(new Date(), i);
+      const key = format(date, 'yyyy-MM');
+      stats[key] = { sent: 0, failed: 0 };
+    }
+
+    emailLogs.forEach(log => {
+      const key = format(new Date(log.created_at), 'yyyy-MM');
+      if (stats[key]) {
+        stats[key].sent += log.sent_count;
+        stats[key].failed += log.failed_count;
+      }
+    });
+
+    return Object.entries(stats).map(([key, value]) => ({
+      name: format(new Date(key), 'MMM', { locale: ko }), // 12월, 1월 etc
+      fullDate: key,
+      성공: value.sent,
+      실패: value.failed
+    }));
+  }, [emailLogs]); // Use raw logs for global trend
+
+  const totalStats = {
+    totalLogs: filteredLogs.length,
+    successCount: filteredLogs.reduce((acc, log) => acc + (log.status === 'success' ? 1 : 0), 0),
+    failedCount: filteredLogs.reduce((acc, log) => acc + (log.status === 'failed' ? 1 : 0), 0),
+    duplicateBlocked: filteredLogs.reduce((sum, log) => sum + (log.results?.statistics?.duplicate_blocked || 0), 0)
+  };
+
+  const getSurveyInfo = (surveyId: string) => {
+    const info = surveyDetails[surveyId];
+    if (!info) return { title: '설문 정보 없음', meta: undefined };
+
+    const segments: string[] = [];
+    if (info.education_year) segments.push(`${info.education_year}년`);
+    if (info.education_round) segments.push(`${info.education_round}차`);
+
+    return { title: info.title, meta: segments.length > 0 ? segments.join(' ') : undefined };
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'success': return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">성공</Badge>;
+      case 'failed': return <Badge variant="destructive">실패</Badge>;
+      case 'pending': return <Badge variant="secondary">대기</Badge>;
+      default: return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
   if (!canViewLogs) {
     return (
       <DashboardLayout
         title="이메일 로그"
-        subtitle="이메일 발송 이력 및 상태 확인"
         icon={<Mail className="h-5 w-5 text-white" />}
       >
         <div className="flex items-center justify-center py-8">
@@ -233,57 +326,9 @@ const DashboardEmailLogs = () => {
     );
   }
 
-  const totalStats = {
-    totalLogs: emailLogs.length,
-    successCount: emailLogs.filter(log => log.status === 'success').length,
-    failedCount: emailLogs.filter(log => log.status === 'failed').length,
-    pendingCount: emailLogs.filter(log => log.status === 'pending').length,
-    duplicateBlocked: emailLogs.reduce((sum, log) => 
-      sum + (log.results?.statistics?.duplicate_blocked || 0), 0
-    )
-  };
-
-  const getSurveyInfo = (surveyId: string) => {
-    const info = surveyDetails[surveyId];
-
-    if (!info) {
-      return {
-        title: '설문 정보 없음',
-        meta: undefined,
-      };
-    }
-
-    const segments: string[] = [];
-    if (info.education_year) {
-      segments.push(`${info.education_year}년`);
-    }
-    if (info.education_round) {
-      segments.push(`${info.education_round}차`);
-    }
-
-    return {
-      title: info.title,
-      meta: segments.length > 0 ? segments.join(' ') : undefined,
-    };
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'success':
-        return <Badge className="bg-green-100 text-green-800">성공</Badge>;
-      case 'failed':
-        return <Badge variant="destructive">실패</Badge>;
-      case 'pending':
-        return <Badge variant="secondary">대기</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
   return (
     <DashboardLayout
       title="이메일 로그"
-      subtitle="이메일 발송 이력 및 상태 확인"
       icon={<Mail className="h-5 w-5 text-white" />}
       loading={loading}
       actions={[
@@ -298,100 +343,182 @@ const DashboardEmailLogs = () => {
       ]}
     >
       <div className="space-y-6">
-        {/* 자동 이메일 전송 제어 */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-primary" />
-                  <Label htmlFor="auto-email-toggle" className="text-base font-semibold cursor-pointer">
-                    자동 이메일 전송
-                  </Label>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  설문 종료 시 자동으로 결과를 이메일로 발송합니다
-                </p>
-              </div>
-              <Switch
-                id="auto-email-toggle"
-                checked={autoEmailEnabled}
-                onCheckedChange={toggleAutoEmail}
-                disabled={toggleLoading}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 통계 카드 */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* 상단 통계 카드 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <Mail className="h-4 w-4 text-blue-600" />
-                <div className="ml-2">
-                  <p className="text-sm font-medium text-muted-foreground">총 발송 기록</p>
-                  <div className="text-2xl font-bold">{totalStats.totalLogs}</div>
-                </div>
+            <CardContent className="pt-6 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">총 발송</p>
+                <div className="text-2xl font-bold">{totalStats.totalLogs}</div>
               </div>
+              <Mail className="h-8 w-8 text-blue-100 text-blue-600" />
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <div className="ml-2">
-                  <p className="text-sm font-medium text-muted-foreground">총 성공 발송</p>
-                  <div className="text-2xl font-bold">{totalStats.successCount}</div>
-                </div>
+            <CardContent className="pt-6 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">성공</p>
+                <div className="text-2xl font-bold text-green-600">{totalStats.successCount}</div>
               </div>
+              <CheckCircle className="h-8 w-8 text-green-600" />
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <XCircle className="h-4 w-4 text-red-600" />
-                <div className="ml-2">
-                  <p className="text-sm font-medium text-muted-foreground">총 실패 건수</p>
-                  <div className="text-2xl font-bold">{totalStats.failedCount}</div>
-                </div>
+            <CardContent className="pt-6 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">실패</p>
+                <div className="text-2xl font-bold text-red-600">{totalStats.failedCount}</div>
               </div>
+              <XCircle className="h-8 w-8 text-red-600" />
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <AlertCircle className="h-4 w-4 text-yellow-600" />
-                <div className="ml-2">
-                  <p className="text-sm font-medium text-muted-foreground">중복 차단</p>
-                  <div className="text-2xl font-bold">{totalStats.duplicateBlocked}</div>
-                </div>
+            <CardContent className="pt-6 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">중복 차단</p>
+                <div className="text-2xl font-bold text-yellow-600">{totalStats.duplicateBlocked}</div>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <Clock className="h-4 w-4 text-purple-600" />
-                <div className="ml-2">
-                  <p className="text-sm font-medium text-muted-foreground">성공률</p>
-                  <div className="text-2xl font-bold">
-                    {totalStats.totalLogs > 0 ? Math.round((totalStats.successCount / totalStats.totalLogs) * 100) : 0}%
-                  </div>
-                </div>
-              </div>
+              <AlertCircle className="h-8 w-8 text-yellow-600" />
             </CardContent>
           </Card>
         </div>
 
-        {/* 이메일 로그 테이블 */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* 월별 발송 통계 차트 (Main Feature) */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                월별 발송 통계
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyStats} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                      cursor={{ fill: '#f1f5f9' }}
+                    />
+                    <Legend />
+                    <Bar dataKey="성공" fill="#22c55e" radius={[4, 4, 0, 0]} barSize={30} />
+                    <Bar dataKey="실패" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={30} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 자동 발송 설정 카드 (Compact) */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">자동 발송 설정</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="space-y-0.5">
+                    <Label className="text-base">자동 전송</Label>
+                    <p className="text-xs text-muted-foreground">설문 종료 시 결과 발송</p>
+                  </div>
+                  <Switch
+                    checked={autoEmailEnabled}
+                    onCheckedChange={toggleAutoEmail}
+                    disabled={toggleLoading}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 필터 카드 (Mobile/Desktop stacked) */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  필터 검색
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">설문 선택</Label>
+                  <Select value={selectedSurvey} onValueChange={setSelectedSurvey}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue placeholder="전체 설문" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">전체 설문</SelectItem>
+                      {Object.values(surveyDetails).map((survey) => (
+                        <SelectItem key={survey.id} value={survey.id}>
+                          {survey.title.length > 15 ? survey.title.slice(0, 15) + '...' : survey.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">상태</Label>
+                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue placeholder="모든 상태" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">모든 상태</SelectItem>
+                      <SelectItem value="success">성공</SelectItem>
+                      <SelectItem value="failed">실패</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">날짜 (Optional)</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full h-8 justify-start text-left font-normal text-xs">
+                        <CalendarIcon className="mr-2 h-3 w-3" />
+                        {dateRange ? format(dateRange, 'yyyy-MM-dd') : '날짜 선택'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={dateRange}
+                        onSelect={setDateRange}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {dateRange && (
+                    <Button variant="ghost" size="sm" onClick={() => setDateRange(undefined)} className="h-6 text-xs w-full">
+                      초기화
+                    </Button>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">검색</Label>
+                  <Input
+                    placeholder="수신자 이메일, 설문명"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* 로그 테이블 */}
         <Card>
           <CardHeader>
-            <CardTitle>설문 결과 이메일 발송 기록 및 통계</CardTitle>
+            <CardTitle className="text-lg">상세 로그 목록 ({filteredLogs.length}건)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -402,80 +529,64 @@ const DashboardEmailLogs = () => {
                     <TableHead>수신자</TableHead>
                     <TableHead>상태</TableHead>
                     <TableHead>발송 결과</TableHead>
+                    <TableHead>일시</TableHead>
                     <TableHead>상세</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {emailLogs.length === 0 ? (
+                  {filteredLogs.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8">
-                        <div className="text-muted-foreground">이메일 발송 기록이 없습니다.</div>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <div className="text-muted-foreground">검색 결과가 없습니다.</div>
                       </TableCell>
                     </TableRow>
                   ) : (
-                    emailLogs.map((log) => {
+                    filteredLogs.map((log) => {
                       const surveyInfo = getSurveyInfo(log.survey_id);
-
                       return (
                         <TableRow key={log.id}>
                           <TableCell>
-                            <div className="space-y-1">
-                              <div className="font-medium">{surveyInfo.title}</div>
+                            <div className="space-y-1 max-w-[200px]">
+                              <div className="font-medium truncate" title={surveyInfo.title}>{surveyInfo.title}</div>
                               {surveyInfo.meta && (
                                 <div className="text-xs text-muted-foreground">{surveyInfo.meta}</div>
                               )}
-                              <div className="text-xs text-muted-foreground">
-                                {new Date(log.created_at).toLocaleString('ko-KR')}
-                              </div>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="space-y-1">
-                              {log.results?.emailResults ? (
-                                <div className="text-sm">
-                                  {log.results.emailResults.slice(0, 3).map((result: any, idx: number) => (
-                                    <div key={idx} className="flex items-center gap-2">
-                                      {result.status === 'sent' ? (
-                                        <CheckCircle2 className="h-3 w-3 text-green-600" />
-                                      ) : (
-                                        <XCircle className="h-3 w-3 text-red-600" />
-                                      )}
-                                      <span className="font-medium">{result.name || result.to?.split('@')[0]}</span>
-                                      <span className="text-xs text-muted-foreground">({result.to})</span>
-                                    </div>
-                                  ))}
-                                  {log.results.emailResults.length > 3 && (
-                                    <div className="text-xs text-muted-foreground mt-1">
-                                      외 {log.results.emailResults.length - 3}명
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <span className="text-sm">{log.recipients?.length || 0}명</span>
-                              )}
+                              <span className="text-sm">{log.recipients?.length || 0}명</span>
+                              <div className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                {log.recipients?.[0] || '-'}
+                                {log.recipients?.length > 1 && ` 외 ${log.recipients.length - 1}명`}
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell>{getStatusBadge(log.status)}</TableCell>
                           <TableCell>
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2 text-green-600">
-                                <CheckCircle2 className="h-4 w-4" />
-                                <span>성공: {log.sent_count || 0}명</span>
-                              </div>
+                            <div className="space-y-1 text-sm">
+                              {log.sent_count > 0 && (
+                                <div className="flex items-center gap-1 text-green-600">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  <span>{log.sent_count}</span>
+                                </div>
+                              )}
                               {log.failed_count > 0 && (
-                                <div className="flex items-center gap-2 text-red-600">
-                                  <XCircle className="h-4 w-4" />
-                                  <span>실패: {log.failed_count}명</span>
+                                <div className="flex items-center gap-1 text-red-600">
+                                  <XCircle className="h-3 w-3" />
+                                  <span>{log.failed_count}</span>
                                 </div>
                               )}
                             </div>
                           </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {format(new Date(log.created_at), 'yyyy-MM-dd HH:mm')}
+                          </TableCell>
                           <TableCell>
                             <Dialog>
                               <DialogTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                  <FileText className="h-4 w-4 mr-2" />
-                                  상세
+                                <Button variant="ghost" size="sm">
+                                  <FileText className="h-4 w-4" />
                                 </Button>
                               </DialogTrigger>
                               <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
@@ -483,206 +594,45 @@ const DashboardEmailLogs = () => {
                                   <DialogTitle>이메일 발송 상세 정보</DialogTitle>
                                 </DialogHeader>
                                 <div className="space-y-6">
-                                  <div>
-                                    <h4 className="font-semibold mb-3 flex items-center gap-2">
-                                      <Mail className="h-4 w-4" />
-                                      설문 정보
-                                    </h4>
-                                    <div className="p-3 bg-muted rounded-lg">
-                                      <p className="font-medium">{surveyInfo.title}</p>
-                                      {surveyInfo.meta && (
-                                        <p className="text-sm text-muted-foreground mt-1">{surveyInfo.meta}</p>
-                                      )}
-                                      <p className="text-sm text-muted-foreground mt-1">
-                                        발송 시간: {new Date(log.created_at).toLocaleString('ko-KR')}
-                                      </p>
-                                    </div>
+                                  {/* Details Content (Same as before) */}
+                                  <div className="p-3 bg-muted rounded-lg">
+                                    <p className="font-medium">{surveyInfo.title}</p>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      발송 시간: {new Date(log.created_at).toLocaleString('ko-KR')}
+                                    </p>
                                   </div>
-                                  
-                                   {log.results?.statistics && (
-                                    <div>
-                                      <h4 className="font-semibold mb-3 flex items-center gap-2">
-                                        <AlertCircle className="h-4 w-4" />
-                                        발송 통계
-                                      </h4>
-                                      <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
-                                        <div>
-                                          <p className="text-sm text-muted-foreground">총 수신자</p>
-                                          <p className="text-xl font-bold">{log.results.statistics.total_recipients || 0}</p>
-                                        </div>
-                                        <div>
-                                          <p className="text-sm text-muted-foreground">중복 차단</p>
-                                          <p className="text-xl font-bold text-yellow-600">{log.results.statistics.duplicate_blocked || 0}</p>
-                                        </div>
-                                        <div>
-                                          <p className="text-sm text-muted-foreground">전체 결과 수신</p>
-                                          <p className="text-xl font-bold text-blue-600">{log.results.statistics.by_scope?.full || 0}</p>
-                                        </div>
-                                        <div>
-                                          <p className="text-sm text-muted-foreground">개별 결과 수신</p>
-                                          <p className="text-xl font-bold text-purple-600">{log.results.statistics.by_scope?.filtered || 0}</p>
-                                        </div>
-                                      </div>
-                                      {log.results.statistics.by_role && (
-                                        <div className="mt-4">
-                                          <p className="text-sm font-medium mb-2">역할별 발송 현황</p>
-                                          <div className="space-y-2">
-                                            {Object.entries(log.results.statistics.by_role).map(([role, stats]: [string, any]) => (
-                                              <div key={role} className="flex items-center justify-between p-2 bg-background rounded border">
-                                                <span className="font-medium capitalize">{role}</span>
-                                                <div className="flex gap-4 text-sm">
-                                                  <span className="text-green-600">발송: {stats.sent}</span>
-                                                  {stats.failed > 0 && <span className="text-red-600">실패: {stats.failed}</span>}
-                                                  {stats.duplicate_blocked > 0 && <span className="text-yellow-600">중복: {stats.duplicate_blocked}</span>}
-                                                </div>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                  
+
                                   {log.results?.recipientDetails && (
-                                    <div>
-                                      <h4 className="font-semibold mb-3 flex items-center gap-2">
-                                        <Users className="h-4 w-4" />
-                                        수신자별 상세 ({log.results.recipientDetails.length}명)
-                                      </h4>
-                                      <ScrollArea className="h-[400px]">
+                                    <div className="border rounded-md p-4">
+                                      <h4 className="font-semibold mb-3">수신자 상세 리스트</h4>
+                                      <ScrollArea className="h-[300px]">
                                         <div className="space-y-2">
                                           {log.results.recipientDetails.map((detail: any, idx: number) => (
-                                            <div 
-                                              key={idx} 
-                                              className={`p-3 rounded-lg border ${
-                                                detail.status === 'sent' 
-                                                  ? 'bg-green-50 border-green-200' 
-                                                  : detail.status === 'duplicate_blocked'
-                                                  ? 'bg-yellow-50 border-yellow-200'
-                                                  : 'bg-red-50 border-red-200'
-                                              }`}
-                                            >
-                                              <div className="flex items-start justify-between">
-                                                <div className="flex-1">
-                                                  <div className="flex items-center gap-2 mb-1">
-                                                    {detail.status === 'sent' ? (
-                                                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                                    ) : detail.status === 'duplicate_blocked' ? (
-                                                      <AlertCircle className="h-4 w-4 text-yellow-600" />
-                                                    ) : (
-                                                      <XCircle className="h-4 w-4 text-red-600" />
-                                                    )}
-                                                    <span className="font-medium">{detail.email}</span>
-                                                  </div>
-                                                  <div className="flex gap-2 text-xs text-muted-foreground">
-                                                    <Badge variant="outline" className="capitalize">{detail.role}</Badge>
-                                                    {detail.dataScope && (
-                                                      <Badge variant={detail.dataScope === 'full' ? 'default' : 'secondary'}>
-                                                        {detail.dataScope === 'full' ? '전체 결과' : '개별 결과'}
-                                                      </Badge>
-                                                    )}
-                                                    {detail.status === 'duplicate_blocked' && (
-                                                      <Badge variant="outline" className="bg-yellow-100">중복 차단</Badge>
-                                                    )}
-                                                  </div>
-                                                  {detail.error && (
-                                                    <p className="text-xs text-red-600 mt-2">{detail.error}</p>
-                                                  )}
-                                                  {detail.reason && (
-                                                    <p className="text-xs text-yellow-700 mt-2">{detail.reason}</p>
-                                                  )}
-                                                </div>
-                                                {detail.emailId && (
-                                                  <span className="text-xs text-muted-foreground">ID: {detail.emailId.slice(0, 8)}...</span>
-                                                )}
-                                              </div>
+                                            <div key={idx} className="flex justify-between p-2 border-b last:border-0 text-sm">
+                                              <span>{detail.email}</span>
+                                              <Badge variant={detail.status === 'sent' ? 'outline' : 'destructive'}>
+                                                {detail.status}
+                                              </Badge>
                                             </div>
                                           ))}
                                         </div>
                                       </ScrollArea>
                                     </div>
                                   )}
-                                  
-                                  {!log.results?.recipientDetails && log.results?.emailResults && (
-                                    <div>
-                                      <h4 className="font-semibold mb-3 flex items-center gap-2">
-                                        <Users className="h-4 w-4" />
-                                        수신자별 발송 결과 ({log.results.emailResults.length}명)
-                                      </h4>
-                                      <div className="space-y-2">
-                                        {log.results.emailResults.map((result: any, idx: number) => (
-                                          <div 
-                                            key={idx} 
-                                            className={`p-3 rounded-lg border ${
-                                              result.status === 'sent' 
-                                                ? 'bg-green-50 border-green-200' 
-                                                : 'bg-red-50 border-red-200'
-                                            }`}
-                                          >
-                                            <div className="flex items-start justify-between">
-                                              <div className="flex items-start gap-3 flex-1">
-                                                {result.status === 'sent' ? (
-                                                  <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
-                                                ) : (
-                                                  <XCircle className="h-5 w-5 text-red-600 mt-0.5" />
-                                                )}
-                                                <div className="flex-1">
-                                                  <div className="font-medium text-sm">
-                                                    {result.name || result.to?.split('@')[0]}
-                                                  </div>
-                                                  <div className="text-xs text-muted-foreground mt-1">
-                                                    {result.to}
-                                                  </div>
-                                                  {result.error && (
-                                                    <div className="mt-2 p-2 bg-red-100 rounded text-xs text-red-800">
-                                                      <div className="flex items-start gap-2">
-                                                        <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                                        <div>
-                                                          <strong>오류:</strong> {result.error}
-                                                          {result.errorCode && (
-                                                            <div className="mt-1">(코드: {result.errorCode})</div>
-                                                          )}
-                                                        </div>
-                                                      </div>
-                                                    </div>
-                                                  )}
-                                                  {result.messageId && (
-                                                    <div className="text-xs text-muted-foreground mt-1">
-                                                      Message ID: {result.messageId}
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              </div>
-                                              <Badge variant={result.status === 'sent' ? 'default' : 'destructive'}>
-                                                {result.status === 'sent' ? '발송 완료' : '발송 실패'}
-                                              </Badge>
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
 
-                                  {!log.results?.emailResults && log.recipients && (
-                                    <div>
+                                  {!log.results?.recipientDetails && log.recipients && (
+                                    <div className="border rounded-md p-4">
                                       <h4 className="font-semibold mb-3">수신자 목록</h4>
-                                      <div className="text-sm space-y-1">
-                                        {log.recipients.map((recipient: string, idx: number) => (
-                                          <div key={idx} className="p-2 bg-muted rounded">
-                                            {recipient}
-                                          </div>
-                                        ))}
+                                      <div className="max-h-60 overflow-y-auto text-sm">
+                                        {log.recipients.join(', ')}
                                       </div>
                                     </div>
                                   )}
 
                                   {log.results && (
-                                    <div>
-                                      <h4 className="font-semibold mb-3 flex items-center gap-2">
-                                        <FileText className="h-4 w-4" />
-                                        전체 응답 데이터 (디버깅용)
-                                      </h4>
-                                      <pre className="text-xs bg-muted p-4 rounded-lg overflow-auto max-h-96 font-mono">
+                                    <div className="mt-4">
+                                      <h4 className="font-semibold mb-2">JSON 데이터</h4>
+                                      <pre className="text-xs bg-slate-950 text-slate-50 p-4 rounded overflow-auto max-h-40">
                                         {JSON.stringify(log.results, null, 2)}
                                       </pre>
                                     </div>
@@ -693,8 +643,8 @@ const DashboardEmailLogs = () => {
                           </TableCell>
                         </TableRow>
                       );
-                     })
-                   )}
+                    })
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -702,6 +652,7 @@ const DashboardEmailLogs = () => {
         </Card>
       </div>
 
+      {/* Allowlist Dialog (Same as before) */}
       <Dialog open={allowlistOpen} onOpenChange={setAllowlistOpen}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
@@ -726,10 +677,6 @@ const DashboardEmailLogs = () => {
           <ScrollArea className="h-72 rounded-md border p-3">
             <pre className="whitespace-pre-wrap text-sm leading-6">{allowlistEmails.join('\n')}</pre>
           </ScrollArea>
-
-          <div className="text-xs text-muted-foreground pt-2">
-            참고: Resend Test Emails는 도메인 검증 없이 허용 목록에 추가된 주소만 수신 가능합니다.
-          </div>
         </DialogContent>
       </Dialog>
     </DashboardLayout>
