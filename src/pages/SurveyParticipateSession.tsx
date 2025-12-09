@@ -17,6 +17,7 @@ import { ko } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { InstructorInfoSection } from '@/components/InstructorInfoSection';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 
 interface Survey {
   id: string;
@@ -529,10 +530,23 @@ const SurveyParticipateSession = () => {
     scrollToTop();
   };
 
-  const handleGroupSelect = (groupIndex: number) => {
-    setCurrentQuestionIndex(groupIndex);
-    scrollToTop();
-  };
+  // 온라인 상태 감지
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const [showTestResultDialog, setShowTestResultDialog] = useState(false);
 
   const isTestMode = searchParams.get('mode') === 'test';
 
@@ -545,17 +559,9 @@ const SurveyParticipateSession = () => {
     if (isTestMode) {
       setSubmitting(true);
       // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      console.log('🧪 [TEST MODE] 세션 설문 제출 시뮬레이션 완료');
-      console.log('Answers:', answers);
-
-      toast({ title: '[테스트] 설문 제출 완료', description: '테스트 모드이므로 데이터가 저장되지 않았습니다.' });
-
-      // navigate('/survey-complete', { replace: true }); // 테스트라 유지할지 말지? 사용성에 따라 다름.
-      // 여기선 그냥 완료 페이지로 이동시키는게 깔끔.
-      navigate('/survey-complete', { replace: true });
+      await new Promise(resolve => setTimeout(resolve, 800));
       setSubmitting(false);
+      setShowTestResultDialog(true);
       return;
     }
 
@@ -895,16 +901,53 @@ const SurveyParticipateSession = () => {
     );
   }
 
+  const handleTestComplete = () => {
+    setShowTestResultDialog(false);
+    console.log('🧪 [TEST MODE] 세션 설문 제출 시뮬레이션 완료');
+    toast({ title: '[테스트] 설문 제출 완료', description: '테스트 모드이므로 데이터가 저장되지 않았습니다.' });
+    navigate('/survey-complete', { replace: true });
+  };
+
   const currentSessionData = surveySessions[currentSessionIndex];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-blue-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
+      {!isOnline && (
+        <div className="bg-destructive text-destructive-foreground text-xs px-4 py-2 text-center font-medium sticky top-0 z-[60]">
+          📡 인터넷 연결이 끊겼습니다. 연결되면 자동으로 저장됩니다.
+        </div>
+      )}
       {isTestMode && (
         <div className="bg-orange-100 text-orange-800 text-xs px-4 py-1 text-center font-medium border-b border-orange-200">
           🧪 테스트 모드입니다. 응답 데이터가 저장되지 않습니다.
         </div>
       )}
       <main className="mx-auto max-w-6xl px-4 py-6 lg:py-12">
+        <Dialog open={showTestResultDialog} onOpenChange={setShowTestResultDialog}>
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+            <CardHeader className="px-0 pt-0">
+              <CardTitle>🧪 테스트 제출 데이터 확인</CardTitle>
+            </CardHeader>
+            <div className="space-y-4">
+              <div className="bg-muted p-4 rounded-md overflow-x-auto">
+                <pre className="text-xs font-mono whitespace-pre-wrap">
+                  {JSON.stringify({
+                    surveyId,
+                    answers: answers.filter(a => Array.isArray(a.answer) ? a.answer.length > 0 : String(a.answer).trim() !== '').map(a => ({
+                      questionId: a.questionId,
+                      value: a.answer
+                    })),
+                    submittedAt: new Date().toISOString()
+                  }, null, 2)}
+                </pre>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowTestResultDialog(false)}>돌아가기</Button>
+                <Button onClick={handleTestComplete}>테스트 승인 및 완료처리</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
         <div className="mb-6 flex items-center justify-between">
           <Button variant="ghost" onClick={() => navigate('/')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
