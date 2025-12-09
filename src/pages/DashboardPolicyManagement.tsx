@@ -6,11 +6,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield, Users, Database, Eye, EyeOff, AlertTriangle, CheckCircle, Settings, UserCog, ChevronDown, ChevronRight } from 'lucide-react';
+import { Shield, Users, Database, Eye, EyeOff, AlertTriangle, CheckCircle, Settings, UserCog, ChevronDown, ChevronRight, Search, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 
 interface PagePermission {
@@ -162,14 +163,14 @@ const DashboardPolicyManagement = () => {
 
   // 사용자가 접근 가능한 페이지 필터링
   const getAccessiblePages = () => {
-    return pagePermissions.filter(page => 
+    return pagePermissions.filter(page =>
       page.requiredRoles.some(role => userRoles.includes(role))
     );
   };
 
   // 사용자가 접근 불가능한 페이지 필터링
   const getInaccessiblePages = () => {
-    return pagePermissions.filter(page => 
+    return pagePermissions.filter(page =>
       !page.requiredRoles.some(role => userRoles.includes(role))
     );
   };
@@ -207,7 +208,7 @@ const DashboardPolicyManagement = () => {
 
     try {
       setUsersLoading(true);
-      
+
       // 먼저 모든 프로필을 가져옴
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
@@ -250,7 +251,7 @@ const DashboardPolicyManagement = () => {
   const updateUserRoles = async (userId: string, newRoles: string[]) => {
     try {
       setSavingRoles(userId);
-      
+
       const { error } = await supabase.rpc('admin_set_user_roles_safe', {
         target_user_id: userId,
         roles: newRoles as ('admin' | 'operator' | 'director' | 'instructor')[]
@@ -259,7 +260,7 @@ const DashboardPolicyManagement = () => {
       if (error) throw error;
 
       // 로컬 상태 업데이트
-      setUsers(prev => prev.map(u => 
+      setUsers(prev => prev.map(u =>
         u.id === userId ? { ...u, roles: newRoles } : u
       ));
 
@@ -322,6 +323,23 @@ const DashboardPolicyManagement = () => {
   const accessiblePages = getAccessiblePages();
   const inaccessiblePages = getInaccessiblePages();
 
+  const [userSearch, setUserSearch] = useState('');
+
+  // Group policies by table
+  const groupedPolicies = React.useMemo(() => {
+    const groups: Record<string, PolicyInfo[]> = {};
+    policies.forEach(p => {
+      if (!groups[p.table_name]) groups[p.table_name] = [];
+      groups[p.table_name].push(p);
+    });
+    return groups;
+  }, [policies]);
+
+  const filteredUsers = users.filter(u =>
+    u.email.toLowerCase().includes(userSearch.toLowerCase()) ||
+    u.roles.some(r => r.toLowerCase().includes(userSearch.toLowerCase()))
+  );
+
   return (
     <DashboardLayout
       title="정책 관리"
@@ -379,10 +397,21 @@ const DashboardPolicyManagement = () => {
             {isAdmin ? (
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <UserCog className="h-5 w-5" />
-                    전체 사용자 권한 관리
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <UserCog className="h-5 w-5" />
+                      전체 사용자 권한 관리
+                    </CardTitle>
+                    <div className="relative w-64">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="이메일 또는 역할 검색..."
+                        value={userSearch}
+                        onChange={(e) => setUserSearch(e.target.value)}
+                        className="pl-8"
+                      />
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {usersLoading ? (
@@ -390,17 +419,14 @@ const DashboardPolicyManagement = () => {
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                       <p className="text-muted-foreground mt-2">사용자 정보를 불러오는 중...</p>
                     </div>
-                  ) : users.length === 0 ? (
-                    <Alert>
-                      <Users className="h-4 w-4" />
-                      <AlertDescription>
-                        등록된 사용자가 없습니다.
-                      </AlertDescription>
-                    </Alert>
+                  ) : filteredUsers.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      검색 결과가 없습니다.
+                    </div>
                   ) : (
                     <div>
                       <div className="flex items-center justify-between mb-4">
-                        <p className="text-sm text-muted-foreground">총 {users.length}명의 사용자</p>
+                        <p className="text-sm text-muted-foreground">총 {filteredUsers.length}명의 사용자</p>
                         <Button variant="outline" size="sm" onClick={fetchUsers}>새로고침</Button>
                       </div>
                       <div className="rounded-md border">
@@ -415,13 +441,13 @@ const DashboardPolicyManagement = () => {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {users.map((u) => {
-                              const userAccessiblePages = pagePermissions.filter(page => 
+                            {filteredUsers.map((u) => {
+                              const userAccessiblePages = pagePermissions.filter(page =>
                                 page.requiredRoles.some(role => u.roles.includes(role))
                               );
                               const isEditing = editingUserId === u.id;
                               const isSaving = savingRoles === u.id;
-                              
+
                               return (
                                 <TableRow key={u.id}>
                                   <TableCell className="font-medium">{u.email}</TableCell>
@@ -436,15 +462,7 @@ const DashboardPolicyManagement = () => {
                                               onCheckedChange={() => toggleRole(u.id, role.value)}
                                               disabled={isSaving}
                                             />
-                                            <label
-                                              htmlFor={`${u.id}-${role.value}`}
-                                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                            >
-                                              {role.label}
-                                            </label>
-                                            <span className="text-xs text-muted-foreground">
-                                              ({role.description})
-                                            </span>
+                                            <label htmlFor={`${u.id}-${role.value}`} className="text-sm font-medium">{role.label}</label>
                                           </div>
                                         ))}
                                       </div>
@@ -454,9 +472,7 @@ const DashboardPolicyManagement = () => {
                                           <Badge key={role} className={getRoleColor(role)}>
                                             {roleOptions.find(r => r.value === role)?.label || role}
                                           </Badge>
-                                        )) : (
-                                          <Badge variant="outline">역할 없음</Badge>
-                                        )}
+                                        )) : <Badge variant="outline">역할 없음</Badge>}
                                       </div>
                                     )}
                                   </TableCell>
@@ -464,30 +480,14 @@ const DashboardPolicyManagement = () => {
                                     {new Date(u.created_at).toLocaleDateString('ko-KR')}
                                   </TableCell>
                                   <TableCell>
-                                    <span className="text-sm">
-                                      {userAccessiblePages.length}개 페이지
-                                    </span>
+                                    <span className="text-sm">{userAccessiblePages.length}개 페이지</span>
                                   </TableCell>
                                   <TableCell>
                                     <div className="flex items-center gap-2">
                                       {isEditing ? (
-                                        <>
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => setEditingUserId(null)}
-                                            disabled={isSaving}
-                                          >
-                                            취소
-                                          </Button>
-                                        </>
+                                        <Button variant="outline" size="sm" onClick={() => setEditingUserId(null)} disabled={isSaving}>취소</Button>
                                       ) : (
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => setEditingUserId(u.id)}
-                                          disabled={isSaving}
-                                        >
+                                        <Button variant="outline" size="sm" onClick={() => setEditingUserId(u.id)} disabled={isSaving}>
                                           {isSaving ? '저장중...' : '편집'}
                                         </Button>
                                       )}
@@ -590,113 +590,63 @@ const DashboardPolicyManagement = () => {
           <TabsContent value="policies" className="space-y-4">
             {isAdmin ? (
               <>
-                {/* 역할별 권한 매트릭스 */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Database className="h-5 w-5" />
-                      역할별 데이터 접근 권한
+                      RLS 정책 목록
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-6">
-                      {/* 권한 매트릭스 */}
-                      <div className="grid gap-4">
-                        {/* 핵심 테이블별 권한 요약 */}
-                        {[
-                          {
-                            table: 'surveys',
-                            title: '설문 관리',
-                            description: '설문 생성, 수정, 조회',
-                            roles: {
-                              admin: ['조회', '생성', '수정', '삭제'],
-                              operator: ['조회', '생성', '수정', '삭제'],
-                              director: ['조회'],
-                              instructor: ['본인 설문 조회'],
-                              public: ['공개 설문 조회']
-                            }
-                          },
-                          {
-                            table: 'survey_responses',
-                            title: '설문 응답',
-                            description: '설문 응답 제출 및 조회',
-                            roles: {
-                              admin: ['모든 응답 조회'],
-                              operator: ['모든 응답 조회'],
-                              director: ['모든 응답 조회'],
-                              instructor: ['본인 설문 응답 조회'],
-                              public: ['응답 제출만 가능']
-                            }
-                          },
-                          {
-                            table: 'question_answers',
-                            title: '질문 답변',
-                            description: '설문 질문별 답변 데이터',
-                            roles: {
-                              admin: ['모든 답변 조회'],
-                              operator: ['모든 답변 조회'],
-                              director: ['모든 답변 조회'],
-                              instructor: ['본인 설문 답변 조회'],
-                              public: ['답변 제출만 가능']
-                            }
-                          },
-                          {
-                            table: 'instructors',
-                            title: '강사 정보',
-                            description: '강사 프로필 및 정보 관리',
-                            roles: {
-                              admin: ['조회', '생성', '수정', '삭제'],
-                              operator: ['조회', '생성', '수정', '삭제'],
-                              director: ['조회'],
-                              instructor: ['본인 정보 조회'],
-                              public: ['공개 정보 조회']
-                            }
-                          },
-                          {
-                            table: 'profiles',
-                            title: '사용자 프로필',
-                            description: '사용자 계정 및 역할 정보',
-                            roles: {
-                              admin: ['모든 프로필 조회'],
-                              operator: ['제한적 조회'],
-                              director: ['제한적 조회'],
-                              instructor: ['본인 프로필만'],
-                              public: ['접근 불가']
-                            }
-                          },
-                          {
-                            table: 'courses',
-                            title: '과목 관리',
-                            description: '과목 및 프로그램 정보',
-                            roles: {
-                              admin: ['조회', '생성', '수정', '삭제'],
-                              operator: ['조회', '생성', '수정', '삭제'],
-                              director: ['조회'],
-                              instructor: ['조회'],
-                              public: ['제한적 조회']
-                            }
-                          }
-                        ].map((tableInfo) => (
-                          <div key={tableInfo.table} className="border rounded-lg p-4">
-                            <div className="flex items-center justify-between mb-3">
-                              <div>
-                                <h4 className="font-semibold text-sm">{tableInfo.title}</h4>
-                                <p className="text-xs text-muted-foreground">{tableInfo.description}</p>
-                              </div>
-                              <Badge variant="outline" className="text-xs font-mono">{tableInfo.table}</Badge>
+                    {loading ? (
+                      <div className="text-center py-8">
+                        <Loader2 className="animate-spin h-8 w-8 mx-auto text-primary" />
+                        <p className="mt-2 text-muted-foreground">정책 로딩 중...</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {Object.entries(groupedPolicies).map(([tableName, rules]) => (
+                          <div key={tableName} className="border rounded-lg overflow-hidden">
+                            <div className="bg-muted/50 px-4 py-3 border-b flex items-center justify-between">
+                              <h3 className="font-semibold text-lg flex items-center gap-2">
+                                <Database className="h-4 w-4 opacity-50" />
+                                {tableName}
+                              </h3>
+                              <Badge variant="outline">{rules.length} Policies</Badge>
                             </div>
-                            <div className="grid grid-cols-5 gap-2 text-xs">
-                              {Object.entries(tableInfo.roles).map(([role, permissions]) => (
-                                <div key={role} className="space-y-1">
-                                  <div className={`px-2 py-1 rounded text-center font-medium ${getRoleColor(role)}`}>
-                                    {role === 'public' ? '비회원' : roleOptions.find(r => r.value === role)?.label || role}
+                            <div className="divide-y">
+                              {rules.map((policy) => (
+                                <div key={policy.policy_name} className="p-4">
+                                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
+                                    <div className="flex items-center gap-3">
+                                      <Badge variant={policy.is_enabled ? 'default' : 'secondary'}>
+                                        {policy.command}
+                                      </Badge>
+                                      <span className="font-medium">{policy.policy_name}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm text-muted-foreground">Roles:</span>
+                                      {policy.roles.split(',').map(r => (
+                                        <Badge key={r} variant="outline" className={r.includes('public') || r.includes('anon') ? 'border-red-200 bg-red-50 text-red-700' : ''}>
+                                          {r}
+                                        </Badge>
+                                      ))}
+                                    </div>
                                   </div>
-                                  <div className="space-y-1">
-                                    {permissions.map((permission, idx) => (
-                                      <div key={idx} className="text-xs bg-gray-50 px-2 py-1 rounded text-center">
-                                        {permission}
+
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm font-mono bg-slate-50 dark:bg-slate-900 p-3 rounded">
+                                    {policy.using_expression && (
+                                      <div>
+                                        <span className="text-xs text-muted-foreground block mb-1">USING:</span>
+                                        <code className="break-all text-blue-600 dark:text-blue-400">{policy.using_expression}</code>
                                       </div>
-                                    ))}
+                                    )}
+                                    {policy.with_check && (
+                                      <div>
+                                        <span className="text-xs text-muted-foreground block mb-1">WITH CHECK:</span>
+                                        <code className="break-all text-green-600 dark:text-green-400">{policy.with_check}</code>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               ))}
@@ -704,165 +654,15 @@ const DashboardPolicyManagement = () => {
                           </div>
                         ))}
                       </div>
-
-                      {/* 주요 보안 정책 요약 */}
-                      <div className="border rounded-lg p-4 bg-yellow-50">
-                        <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                          <Shield className="h-4 w-4 text-yellow-600" />
-                          주요 보안 정책
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                          <div>
-                            <h5 className="font-medium mb-1">데이터 접근 제한</h5>
-                            <ul className="space-y-1 text-muted-foreground">
-                              <li>• 교육생(비회원)은 설문 응답만 가능</li>
-                              <li>• 강사는 본인 설문 결과만 조회 가능</li>
-                              <li>• 관리자/운영자만 전체 데이터 접근</li>
-                            </ul>
-                          </div>
-                          <div>
-                            <h5 className="font-medium mb-1">권한 상속 구조</h5>
-                            <ul className="space-y-1 text-muted-foreground">
-                              <li>• 관리자 &gt; 운영자 &gt; 원장 &gt; 강사</li>
-                              <li>• 상위 역할은 하위 권한 포함</li>
-                              <li>• 시스템 관리는 관리자만 가능</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    )}
                   </CardContent>
-                </Card>
-
-                {/* 상세 RLS 정책 목록 */}
-                <Card>
-                  <CardHeader 
-                    className="cursor-pointer hover:bg-gray-50 transition-colors"
-                    onClick={() => setIsPolicyDetailsExpanded(!isPolicyDetailsExpanded)}
-                  >
-                    <CardTitle className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Settings className="h-5 w-5" />
-                        상세 RLS 정책 목록
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">
-                          {policies.length}개 정책
-                        </span>
-                        {isPolicyDetailsExpanded ? (
-                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </div>
-                    </CardTitle>
-                  </CardHeader>
-                  {isPolicyDetailsExpanded && (
-                    <CardContent>
-                      {loading ? (
-                        <div className="text-center py-8">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                          <p className="text-muted-foreground mt-2">정책 정보를 불러오는 중...</p>
-                        </div>
-                      ) : policies.length === 0 ? (
-                        <Alert>
-                          <Settings className="h-4 w-4" />
-                          <AlertDescription>
-                            등록된 RLS 정책이 없거나 조회 결과가 비어 있습니다.
-                          </AlertDescription>
-                        </Alert>
-                      ) : (
-                        <div>
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2">
-                              <a
-                                href="https://supabase.com/dashboard/project/zxjiugmqfzqluviuwztr/sql/new"
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-sm underline text-primary"
-                              >
-                                SQL 에디터 열기
-                              </a>
-                              <Button variant="outline" size="sm" onClick={fetchPolicies}>새로고침</Button>
-                            </div>
-                          </div>
-                          <div className="rounded-md border overflow-x-auto">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead className="min-w-[120px]">테이블</TableHead>
-                                  <TableHead className="min-w-[200px]">정책명</TableHead>
-                                  <TableHead className="min-w-[80px]">명령</TableHead>
-                                  <TableHead className="min-w-[100px]">역할</TableHead>
-                                  <TableHead className="min-w-[80px]">상태</TableHead>
-                                  <TableHead className="min-w-[200px]">USING 조건</TableHead>
-                                  <TableHead className="min-w-[200px]">WITH CHECK</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {policies.map((p) => (
-                                  <TableRow key={`${p.table_name}-${p.policy_name}-${p.command}`}>
-                                    <TableCell className="font-medium font-mono text-sm">{p.table_name}</TableCell>
-                                    <TableCell className="text-sm max-w-[200px]">
-                                      <div className="truncate" title={p.policy_name}>
-                                        {p.policy_name}
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <Badge variant="secondary" className="text-xs">{p.command}</Badge>
-                                    </TableCell>
-                                    <TableCell className="text-xs">
-                                      <code className="bg-gray-100 px-1 py-0.5 rounded text-xs">
-                                        {p.roles}
-                                      </code>
-                                    </TableCell>
-                                    <TableCell>
-                                      <Badge className={p.is_enabled ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}>
-                                        {p.is_enabled ? '활성' : '비활성'}
-                                      </Badge>
-                                    </TableCell>
-                                    <TableCell className="max-w-[200px]">
-                                      <div 
-                                        className="text-xs text-muted-foreground truncate cursor-help"
-                                        title={p.using_expression}
-                                      >
-                                        <code className="bg-gray-50 px-1 py-0.5 rounded">
-                                          {p.using_expression}
-                                        </code>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell className="max-w-[200px]">
-                                      <div 
-                                        className="text-xs text-muted-foreground truncate cursor-help"
-                                        title={p.with_check}
-                                      >
-                                        <code className="bg-gray-50 px-1 py-0.5 rounded">
-                                          {p.with_check}
-                                        </code>
-                                      </div>
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  )}
                 </Card>
               </>
             ) : (
-              <Card>
-                <CardContent className="pt-6">
-                  <Alert>
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>
-                      RLS 정책 관리는 관리자 권한이 필요합니다.
-                    </AlertDescription>
-                  </Alert>
-                </CardContent>
-              </Card>
+              <Alert>
+                <Shield className="h-4 w-4" />
+                <AlertDescription>관리자만 접근 가능합니다.</AlertDescription>
+              </Alert>
             )}
           </TabsContent>
         </Tabs>
