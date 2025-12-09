@@ -965,76 +965,82 @@ const SurveyResults = () => {
             ) : aggregates.length === 0 ? (
               <div className="py-12 text-center text-muted-foreground">조건에 맞는 설문이 없습니다.</div>
             ) : (
-              <div className="rounded-md border overflow-x-auto">
-                <Table className="min-w-[1000px]">
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="w-[200px] font-semibold text-center">설문 제목</TableHead>
-                      <TableHead className="w-[80px] font-semibold text-center">연도</TableHead>
-                      <TableHead className="w-[80px] font-semibold text-center">차수</TableHead>
-                      <TableHead className="w-[180px] font-semibold text-center">과정명</TableHead>
-                      <TableHead className="w-[120px] font-semibold text-center">강사명</TableHead>
-                      <TableHead className="w-[80px] font-semibold text-center">응답 수</TableHead>
-                      <TableHead className="w-[80px] font-semibold text-center">종합</TableHead>
-                      <TableHead className="w-[80px] font-semibold text-center">강의</TableHead>
-                      <TableHead className="w-[80px] font-semibold text-center">강사</TableHead>
-                      <TableHead className="w-[80px] font-semibold text-center">운영</TableHead>
-                      <TableHead className="w-[100px] font-semibold text-center">상태</TableHead>
-                      <TableHead className="w-[80px] font-semibold text-center">상세</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {aggregates.map((item) => (
-                      <TableRow key={item.survey_id} className="hover:bg-muted/5">
-                        <TableCell className="font-medium">
-                          <div className="flex flex-col">
-                            <span className="truncate max-w-[180px]" title={item.title}>
-                              {item.title}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">{item.education_year}</TableCell>
-                        <TableCell className="text-center">{item.education_round}</TableCell>
-                        <TableCell className="text-center">
-                          <span className="truncate max-w-[160px] block mx-auto" title={item.course_name || '-'}>
-                            {item.course_name || '-'}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {formatInstructorNames(item.survey_id, item.instructor_name)}
-                        </TableCell>
-                        <TableCell className="text-center">{formatNumber(item.response_count)}</TableCell>
-                        <TableCell className="text-center">{formatSatisfaction(item.avg_overall_satisfaction)}</TableCell>
-                        <TableCell className="text-center">{formatSatisfaction(item.avg_course_satisfaction)}</TableCell>
-                        <TableCell className="text-center">
-                          {item.title.includes('[종료 설문]') || item.title.includes('운영')
-                            ? '-'
-                            : formatSatisfaction(item.avg_instructor_satisfaction)
-                          }
-                        </TableCell>
-                        <TableCell className="text-center">{formatSatisfaction(item.avg_operation_satisfaction)}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant={item.status === 'completed' ? 'secondary' : 'outline'} className="whitespace-nowrap">
-                            {item.status === 'completed' ? '완료' : '진행 중'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/survey-detailed-analysis/${item.survey_id}`, { state: { from: 'survey-results' } });
-                            }}
-                          >
-                            <BarChart className="h-4 w-4 mr-1" />
-                            분석
-                          </Button>
-                        </TableCell>
+              <div className="rounded-md border overflow-hidden">
+                <div className="max-h-[600px] overflow-auto relative">
+                  <Table className="min-w-[1000px] border-separate border-spacing-0">
+                    <TableHeader className="sticky top-0 z-20 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/60 shadow-sm">
+                      <TableRow className="hover:bg-transparent border-none">
+                        <TableHead className="w-[200px] font-semibold text-center h-10 border-b">설문 제목</TableHead>
+                        <TableHead className="w-[80px] font-semibold text-center h-10 border-b">연도</TableHead>
+                        <TableHead className="w-[80px] font-semibold text-center h-10 border-b">차수</TableHead>
+                        <TableHead className="w-[180px] font-semibold text-center h-10 border-b">과정명</TableHead>
+                        <TableHead className="w-[120px] font-semibold text-center h-10 border-b">강사명</TableHead>
+                        <TableHead className="w-[80px] font-semibold text-center h-10 border-b">응답 수</TableHead>
+                        <TableHead className="w-[80px] font-semibold text-center h-10 border-b">종합</TableHead>
+                        <TableHead className="w-[80px] font-semibold text-center h-10 border-b">강의</TableHead>
+                        <TableHead className="w-[80px] font-semibold text-center h-10 border-b">강사</TableHead>
+                        <TableHead className="w-[80px] font-semibold text-center h-10 border-b">운영</TableHead>
+                        <TableHead className="w-[100px] font-semibold text-center h-10 border-b">상태</TableHead>
+                        <TableHead className="w-[80px] font-semibold text-center h-10 border-b">상세</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {aggregates.map((item) => (
+                        <TableRow
+                          key={item.survey_id}
+                          className={`hover:bg-muted/5 cursor-pointer transition-colors ${item.survey_id === selectedSurveyId ? 'bg-muted/40' : ''}`}
+                          onClick={() => handleSurveyChange(item.survey_id)}
+                        >
+                          <TableCell className="font-medium border-b">
+                            <div className="flex flex-col">
+                              <span className="truncate max-w-[180px]" title={item.title}>
+                                {item.title}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center border-b">{item.education_year}</TableCell>
+                          <TableCell className="text-center border-b">{item.education_round}</TableCell>
+                          <TableCell className="text-center border-b">
+                            <span className="truncate max-w-[160px] block mx-auto" title={item.course_name || '-'}>
+                              {item.course_name || '-'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center border-b">
+                            {formatInstructorNames(item.survey_id, item.instructor_name)}
+                          </TableCell>
+                          <TableCell className="text-center border-b">{formatNumber(item.response_count)}</TableCell>
+                          <TableCell className="text-center border-b">{formatSatisfaction(item.avg_overall_satisfaction)}</TableCell>
+                          <TableCell className="text-center border-b">{formatSatisfaction(item.avg_course_satisfaction)}</TableCell>
+                          <TableCell className="text-center border-b">
+                            {item.title.includes('[종료 설문]') || item.title.includes('운영')
+                              ? '-'
+                              : formatSatisfaction(item.avg_instructor_satisfaction)
+                            }
+                          </TableCell>
+                          <TableCell className="text-center border-b">{formatSatisfaction(item.avg_operation_satisfaction)}</TableCell>
+                          <TableCell className="text-center border-b">
+                            <Badge variant={item.status === 'completed' ? 'secondary' : 'outline'} className="whitespace-nowrap">
+                              {item.status === 'completed' ? '완료' : '진행 중'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center border-b">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/survey-detailed-analysis/${item.survey_id}`, { state: { from: 'survey-results' } });
+                              }}
+                            >
+                              <BarChart className="h-4 w-4 mr-1" />
+                              분석
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             )}
           </CardContent>
