@@ -24,32 +24,33 @@ export function DashboardLayout({ children, title, description }: DashboardLayou
 
         <div className="flex-1 flex flex-col h-full overflow-hidden">
           {/* Header - 더 컴팩트하게 */}
-          <header className="h-12 border-b border-surface-border bg-surface/90 backdrop-blur-sm supports-[backdrop-filter]:bg-surface/80 shrink-0 z-50 shadow-sm ios-safe-area transition-colors">
-            <div className="flex items-center h-full px-2 sm:px-3 max-w-full overflow-hidden">
-              {/* Left: Sidebar Toggle */}
-              <div className="flex items-center shrink-0">
-                <SidebarTrigger className="h-8 w-8 p-1 mr-2 sm:mr-3" />
+          <header className="h-12 border-b border-surface-border bg-surface/90 backdrop-blur-sm supports-[backdrop-filter]:bg-surface/80 shrink-0 z-50 shadow-sm ios-safe-area transition-colors relative">
+            <div className="flex items-center justify-between h-full px-2 sm:px-3 max-w-full overflow-hidden">
+              {/* Left: Sidebar Toggle - z-index to stay clickable above absolute center */}
+              <div className="flex items-center shrink-0 z-10">
+                <SidebarTrigger className="h-8 w-8 p-1" />
               </div>
 
-              {/* Center: Page Title */}
-              <div className="flex-1 text-center min-w-0 px-1">
-                <div className="flex items-center justify-center gap-2">
-                  <div className="h-5 w-5 sm:h-6 sm:w-6 bg-gradient-to-r from-primary to-primary/80 rounded-lg flex items-center justify-center shadow-lg shrink-0">
+              {/* Center: Page Title - Absolutely centered */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center max-w-[50%]">
+                <div className="flex items-center gap-2">
+                  <div className="h-5 w-5 sm:h-6 sm:w-6 bg-gradient-to-r from-primary to-primary/80 rounded-lg flex items-center justify-center shadow-lg shrink-0 hidden xs:flex">
                     <BarChart className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-primary-foreground" />
                   </div>
-                  <h1 className="text-xs sm:text-sm md:text-base font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent break-words leading-tight line-clamp-1 font-display">
+                  <h1 className="text-sm sm:text-base font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent break-words leading-tight line-clamp-1 font-display truncate">
                     {title}
                   </h1>
                 </div>
+                {/* Mobile: Description hidden */}
                 {description && (
-                  <p className="text-xs text-muted-foreground break-words line-clamp-1 mt-0.5 hidden sm:block font-sans">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground break-words line-clamp-1 hidden sm:block font-sans">
                     {description}
                   </p>
                 )}
               </div>
 
-              {/* Right: User Actions */}
-              <div className="flex items-center space-x-1 shrink-0">
+              {/* Right: User Actions - z-index to stay clickable */}
+              <div className="flex items-center space-x-1 shrink-0 z-10">
                 {/* User Email - Only on larger screens */}
                 <span className="hidden lg:block text-xs text-muted-foreground max-w-20 truncate font-sans">
                   {user?.email}
