@@ -134,8 +134,13 @@ function DisabledFiltersNotice() {
   );
 }
 
-export default function PersonalDashboard() {
-  const { instructorId } = useAuth();
+interface PersonalDashboardProps {
+  targetInstructorId?: string;
+}
+
+export default function PersonalDashboard({ targetInstructorId }: PersonalDashboardProps) {
+  const { instructorId: authInstructorId } = useAuth();
+  const instructorId = targetInstructorId ?? authInstructorId;
   const { data: myStatsData } = useMyStats();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -223,9 +228,9 @@ export default function PersonalDashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         <div className="flex items-center gap-2">
-          {myStatsData && (
+          {stats.filteredRecords[0]?.instructorName && (
             <Badge variant="secondary" className="text-sm">
-              {myStatsData.instructor_name}
+              {stats.filteredRecords[0].instructorName}
             </Badge>
           )}
         </div>

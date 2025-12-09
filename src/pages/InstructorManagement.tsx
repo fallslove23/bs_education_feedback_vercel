@@ -14,7 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Camera, UserPlus, Upload, X, Trash2, Users, RefreshCcw, Grid3X3, List, Search } from 'lucide-react';
+import { Plus, Edit, Camera, UserPlus, Upload, X, Trash2, Users, RefreshCcw, Grid3X3, List, Search, BarChart2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Instructor {
@@ -49,23 +49,23 @@ const InstructorManagement = React.forwardRef<{
   openAddDialog: () => void;
   handleSyncAllInstructors: () => void;
   fetchData: () => void;
-}, { 
-  showPageHeader?: boolean; 
+}, {
+  showPageHeader?: boolean;
   showActions?: boolean;
   onAddInstructor?: () => void;
   onSyncUsers?: () => void;
   onRefresh?: () => void;
-}>(({ 
-  showPageHeader = true, 
+}>(({
+  showPageHeader = true,
   showActions = true,
   onAddInstructor,
   onSyncUsers,
-  onRefresh 
+  onRefresh
 }, ref) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  
+
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [lectures, setLectures] = useState<Lecture[]>([]);
@@ -122,13 +122,13 @@ const InstructorManagement = React.forwardRef<{
       const fetchedLectures = lecturesRes.data || [];
 
       // 강의가 없는 과목 찾기 및 자동 생성
-      const subjectsWithoutLectures = fetchedSubjects.filter((subject: Subject) => 
+      const subjectsWithoutLectures = fetchedSubjects.filter((subject: Subject) =>
         !fetchedLectures.some((lecture: Lecture) => lecture.subject_id === subject.id)
       );
 
       if (subjectsWithoutLectures.length > 0) {
         console.log('강의가 없는 과목 발견:', subjectsWithoutLectures.map((s: Subject) => s.title));
-        
+
         // 각 과목에 대해 기본 강의 생성
         const newLectures = subjectsWithoutLectures.map((subject: Subject) => ({
           subject_id: subject.id,
@@ -266,7 +266,7 @@ const InstructorManagement = React.forwardRef<{
 
         if (!err2 && profilesByEmail && profilesByEmail.length > 0) {
           profile = profilesByEmail[0];
-          
+
           // instructor_id가 연결되지 않았다면 자동으로 연결
           if (!profile.instructor_id) {
             console.log('프로필에 instructor_id 자동 연결(관리자 권한) 중...');
@@ -334,7 +334,7 @@ const InstructorManagement = React.forwardRef<{
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${instructorId || 'new'}-${Date.now()}.${fileExt}`;
-      
+
       const { error: uploadError, data } = await supabase.storage
         .from('instructor-photos')
         .upload(fileName, file);
@@ -355,7 +355,7 @@ const InstructorManagement = React.forwardRef<{
           .eq('id', instructorId);
 
         if (updateError) throw updateError;
-        
+
         await fetchData();
         toast({
           title: "성공",
@@ -379,7 +379,7 @@ const InstructorManagement = React.forwardRef<{
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       let instructorId = editingInstructor?.id;
 
@@ -409,7 +409,7 @@ const InstructorManagement = React.forwardRef<{
           .eq('id', editingInstructor.id);
 
         if (error) throw error;
-        
+
         toast({
           title: "성공",
           description: "강사 정보가 수정되었습니다."
@@ -424,7 +424,7 @@ const InstructorManagement = React.forwardRef<{
 
         if (error) throw error;
         instructorId = data.id;
-        
+
         toast({
           title: "성공",
           description: "새 강사가 추가되었습니다."
@@ -445,11 +445,11 @@ const InstructorManagement = React.forwardRef<{
             instructor_id: instructorId,
             lecture_id: lectureId
           }));
-          
+
           const { error: insertError } = await (supabase as any)
             .from('instructor_lectures')
             .insert(lecturesToInsert);
-          
+
           if (insertError) {
             console.error('Error inserting instructor lectures:', insertError);
           }
@@ -460,16 +460,16 @@ const InstructorManagement = React.forwardRef<{
       if (!editingInstructor && instructorId && formData.email) {
         try {
           const { data: funcResult, error: funcError } = await supabase.rpc(
-            'create_instructor_account', 
+            'create_instructor_account',
             {
               instructor_email: formData.email,
               instructor_password: 'bsedu123',
               instructor_id_param: instructorId
             }
           );
-          
+
           if (funcError) throw funcError;
-          
+
           toast({
             title: "알림",
             description: "강사가 로그인 페이지에서 해당 이메일로 회원가입하면 자동으로 계정이 연결됩니다.",
@@ -509,13 +509,13 @@ const InstructorManagement = React.forwardRef<{
       bio: instructor.bio || '',
       photo_url: instructor.photo_url || ''
     });
-    
+
     // Set selected lectures for this instructor using instructor_lectures table
     const instructorLectureIds = instructorLectures
       .filter(il => il.instructor_id === instructor.id)
       .map(il => il.lecture_id);
     setSelectedLectures(instructorLectureIds);
-    
+
     setIsDialogOpen(true);
   };
 
@@ -532,14 +532,14 @@ const InstructorManagement = React.forwardRef<{
     const instructorLectureIds = instructorLectures
       .filter(il => il.instructor_id === instructorId)
       .map(il => il.lecture_id);
-    
+
     // Get subject IDs from those lectures
     const subjectIds = new Set(
       lectures
         .filter(l => instructorLectureIds.includes(l.id))
         .map(l => l.subject_id)
     );
-    
+
     // Return unique subjects
     return subjects.filter(subject => subjectIds.has(subject.id));
   };
@@ -558,10 +558,10 @@ const InstructorManagement = React.forwardRef<{
     const searchLower = trimmedSearchQuery.toLowerCase();
     const instructorSubjectsData = getInstructorSubjects(instructor.id);
     const subjectTitles = instructorSubjectsData.map(subject => subject.title.toLowerCase()).join(' ');
-    
+
     return instructor.name.toLowerCase().includes(searchLower) ||
-           (instructor.email && instructor.email.toLowerCase().includes(searchLower)) ||
-           subjectTitles.includes(searchLower);
+      (instructor.email && instructor.email.toLowerCase().includes(searchLower)) ||
+      subjectTitles.includes(searchLower);
   });
 
   // Get lectures grouped by subject for dialog
@@ -572,10 +572,10 @@ const InstructorManagement = React.forwardRef<{
 
   // Filter by search query in dialog
   const filteredLecturesBySubject = subjectSearchQuery
-    ? lecturesBySubject.filter(group => 
-        group.subject.title.toLowerCase().includes(subjectSearchQuery.toLowerCase()) ||
-        group.lectures.some(l => l.title.toLowerCase().includes(subjectSearchQuery.toLowerCase()))
-      )
+    ? lecturesBySubject.filter(group =>
+      group.subject.title.toLowerCase().includes(subjectSearchQuery.toLowerCase()) ||
+      group.lectures.some(l => l.title.toLowerCase().includes(subjectSearchQuery.toLowerCase()))
+    )
     : lecturesBySubject;
 
   const toggleLectureSelection = (lectureId: string) => {
@@ -638,22 +638,22 @@ const InstructorManagement = React.forwardRef<{
             target_profile_id: existingProfile.id,
             instructor_id_param: testInstructor.id
           });
-          
+
           // 강사 역할 추가
           await supabase.rpc('admin_set_user_roles_safe', {
             target_user_id: existingProfile.id,
             roles: ['instructor'] as unknown as ('operator' | 'instructor' | 'admin' | 'director')[]
           });
-          
+
           toast({
             title: "성공",
             description: "test@osstem.com 계정이 강사와 연결되었습니다."
           });
         }
       }
-      
+
       const instructorsWithEmail = instructors.filter(instructor => instructor.email);
-      
+
       if (instructorsWithEmail.length === 0) {
         toast({
           title: "알림",
@@ -668,7 +668,7 @@ const InstructorManagement = React.forwardRef<{
       });
 
       if (error) throw error;
-      
+
       toast({
         title: "동기화 완료",
         description: `${data?.successful?.length || instructorsWithEmail.length}명의 강사 계정이 처리되었습니다.`,
@@ -718,8 +718,8 @@ const InstructorManagement = React.forwardRef<{
               <Plus className="h-4 w-4" />
               새 강사 추가
             </Button>
-            <Button 
-              onClick={handleSyncAllInstructors} 
+            <Button
+              onClick={handleSyncAllInstructors}
               variant="outline"
               disabled={creatingUsers}
               className="flex items-center gap-2 rounded-full px-3"
@@ -809,7 +809,7 @@ const InstructorManagement = React.forwardRef<{
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4 sm:p-6">
               <div className="flex items-center">
@@ -843,7 +843,7 @@ const InstructorManagement = React.forwardRef<{
           </Card>
         ) : viewType === 'card' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-             {filteredInstructors.map((instructor) => {
+            {filteredInstructors.map((instructor) => {
               const instructorSubjectsData = getInstructorSubjects(instructor.id);
 
               return (
@@ -923,9 +923,9 @@ const InstructorManagement = React.forwardRef<{
                               className="text-xs"
                             >
                               {role === 'instructor' ? '강사' :
-                               role === 'admin' ? '관리자' :
-                               role === 'director' ? '조직장' :
-                               role === 'operator' ? '운영' : role}
+                                role === 'admin' ? '관리자' :
+                                  role === 'director' ? '조직장' :
+                                    role === 'operator' ? '운영' : role}
                             </Badge>
                           ))
                         ) : (
@@ -960,6 +960,16 @@ const InstructorManagement = React.forwardRef<{
                       >
                         <Edit className="h-3 w-3 mr-1" />
                         수정
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/dashboard/instructors/${instructor.id}`)}
+                        className="flex-1"
+                      >
+                        <BarChart2 className="h-3 w-3 mr-1" />
+                        통계
                       </Button>
 
                       <AlertDialog>
@@ -1043,9 +1053,9 @@ const InstructorManagement = React.forwardRef<{
                                     className="text-xs"
                                   >
                                     {role === 'instructor' ? '강사' :
-                                     role === 'admin' ? '관리자' :
-                                     role === 'director' ? '조직장' :
-                                     role === 'operator' ? '운영' : role}
+                                      role === 'admin' ? '관리자' :
+                                        role === 'director' ? '조직장' :
+                                          role === 'operator' ? '운영' : role}
                                   </Badge>
                                 ))
                               ) : (
@@ -1079,6 +1089,15 @@ const InstructorManagement = React.forwardRef<{
                                 onClick={() => openEditDialog(instructor)}
                               >
                                 <Edit className="h-4 w-4" />
+                              </Button>
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => navigate(`/dashboard/instructors/${instructor.id}`)}
+                                title="통계 보기"
+                              >
+                                <BarChart2 className="h-4 w-4" />
                               </Button>
 
                               {canEditRoles() && (
@@ -1125,195 +1144,195 @@ const InstructorManagement = React.forwardRef<{
               </div>
             </CardContent>
           </Card>
-         )}
-       </div>
+        )}
+      </div>
 
-       {/* Add/Edit Instructor Dialog */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingInstructor ? '강사 수정' : '새 강사 추가'}
-              </DialogTitle>
-              <DialogDescription>
-                강사 기본 정보와 담당 과목을 설정하세요.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">이름 *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="강사 이름"
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="email">이메일</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="이메일 주소"
-                  />
-                </div>
-              </div>
-              
+      {/* Add/Edit Instructor Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingInstructor ? '강사 수정' : '새 강사 추가'}
+            </DialogTitle>
+            <DialogDescription>
+              강사 기본 정보와 담당 과목을 설정하세요.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="bio">소개</Label>
-                <Textarea
-                  id="bio"
-                  value={formData.bio}
-                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                  placeholder="강사 소개"
-                  rows={3}
+                <Label htmlFor="name">이름 *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="강사 이름"
+                  required
                 />
               </div>
-              
-              {/* Photo Upload */}
-              <div className="space-y-2">
-                <Label>프로필 사진</Label>
-                <div className="flex items-center gap-4">
-                  {formData.photo_url && (
-                    <Avatar className="h-16 w-16">
-                      <AvatarImage src={formData.photo_url} alt="미리보기" />
-                      <AvatarFallback><Camera /></AvatarFallback>
-                    </Avatar>
-                  )}
-                  <div className="flex-1">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handlePhotoUpload(file);
-                      }}
-                      className="hidden"
-                      id="photo-upload"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => document.getElementById('photo-upload')?.click()}
-                      disabled={uploadingPhoto}
-                      className="w-full"
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      {uploadingPhoto ? '업로드 중...' : '사진 업로드'}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Lecture Selection */}
-              <div className="space-y-2">
-                <Label>담당 강의 선택</Label>
-                <div className="space-y-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                      placeholder="과목명 또는 강의명으로 검색..."
-                      value={subjectSearchQuery}
-                      onChange={(e) => setSubjectSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  <div className="border rounded-md p-3 max-h-80 overflow-y-auto space-y-4">
-                    {filteredLecturesBySubject.length > 0 ? (
-                      filteredLecturesBySubject.map(({ subject, lectures: subjectLectures }) => (
-                        <div key={subject.id} className="space-y-2">
-                          <h4 className="font-semibold text-sm text-primary">{subject.title}</h4>
-                          <div className="space-y-1 pl-2">
-                            {subjectLectures.length > 0 ? (
-                              subjectLectures.map((lecture) => (
-                                <div key={lecture.id} className="flex items-center space-x-2 py-1">
-                                  <Checkbox
-                                    id={`lecture-${lecture.id}`}
-                                    checked={selectedLectures.includes(lecture.id)}
-                                    onCheckedChange={() => toggleLectureSelection(lecture.id)}
-                                  />
-                                  <Label htmlFor={`lecture-${lecture.id}`} className="flex-1 text-sm">
-                                    {lecture.title}
-                                    {lecture.position != null && (
-                                      <span className="text-muted-foreground"> (순서: {lecture.position})</span>
-                                    )}
-                                  </Label>
-                                </div>
-                              ))
-                            ) : (
-                              <p className="text-xs text-muted-foreground pl-2">이 과목에는 아직 강의가 없습니다.</p>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        {subjectSearchQuery ? '검색 결과가 없습니다.' : '등록된 과목이 없습니다.'}
-                      </p>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    선택된 강의: {selectedLectures.length}개
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="flex-1">
-                  취소
-                </Button>
-                <Button type="submit" className="flex-1">
-                  {editingInstructor ? '수정' : '추가'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
 
-        {/* Role Edit Dialog */}
-        <Dialog open={roleEditDialog} onOpenChange={setRoleEditDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>역할 수정</DialogTitle>
-              <DialogDescription>
-                {editingInstructorRoles?.instructorName}의 역할을 설정하세요.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              {['instructor', 'admin', 'operator', 'director'].map((role) => (
-                <div key={role} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`role-${role}`}
-                    checked={selectedRoles.includes(role)}
-                    onCheckedChange={(checked) => handleRoleChange(role, !!checked)}
-                  />
-                  <Label htmlFor={`role-${role}`}>
-                    {role === 'instructor' ? '강사' : 
-                     role === 'admin' ? '관리자' : 
-                     role === 'director' ? '조직장' : 
-                     role === 'operator' ? '운영' : role}
-                  </Label>
-                </div>
-              ))}
+              <div className="space-y-2">
+                <Label htmlFor="email">이메일</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="이메일 주소"
+                />
+              </div>
             </div>
-            
+
+            <div className="space-y-2">
+              <Label htmlFor="bio">소개</Label>
+              <Textarea
+                id="bio"
+                value={formData.bio}
+                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                placeholder="강사 소개"
+                rows={3}
+              />
+            </div>
+
+            {/* Photo Upload */}
+            <div className="space-y-2">
+              <Label>프로필 사진</Label>
+              <div className="flex items-center gap-4">
+                {formData.photo_url && (
+                  <Avatar className="h-16 w-16">
+                    <AvatarImage src={formData.photo_url} alt="미리보기" />
+                    <AvatarFallback><Camera /></AvatarFallback>
+                  </Avatar>
+                )}
+                <div className="flex-1">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handlePhotoUpload(file);
+                    }}
+                    className="hidden"
+                    id="photo-upload"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById('photo-upload')?.click()}
+                    disabled={uploadingPhoto}
+                    className="w-full"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {uploadingPhoto ? '업로드 중...' : '사진 업로드'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Lecture Selection */}
+            <div className="space-y-2">
+              <Label>담당 강의 선택</Label>
+              <div className="space-y-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="과목명 또는 강의명으로 검색..."
+                    value={subjectSearchQuery}
+                    onChange={(e) => setSubjectSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <div className="border rounded-md p-3 max-h-80 overflow-y-auto space-y-4">
+                  {filteredLecturesBySubject.length > 0 ? (
+                    filteredLecturesBySubject.map(({ subject, lectures: subjectLectures }) => (
+                      <div key={subject.id} className="space-y-2">
+                        <h4 className="font-semibold text-sm text-primary">{subject.title}</h4>
+                        <div className="space-y-1 pl-2">
+                          {subjectLectures.length > 0 ? (
+                            subjectLectures.map((lecture) => (
+                              <div key={lecture.id} className="flex items-center space-x-2 py-1">
+                                <Checkbox
+                                  id={`lecture-${lecture.id}`}
+                                  checked={selectedLectures.includes(lecture.id)}
+                                  onCheckedChange={() => toggleLectureSelection(lecture.id)}
+                                />
+                                <Label htmlFor={`lecture-${lecture.id}`} className="flex-1 text-sm">
+                                  {lecture.title}
+                                  {lecture.position != null && (
+                                    <span className="text-muted-foreground"> (순서: {lecture.position})</span>
+                                  )}
+                                </Label>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-xs text-muted-foreground pl-2">이 과목에는 아직 강의가 없습니다.</p>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      {subjectSearchQuery ? '검색 결과가 없습니다.' : '등록된 과목이 없습니다.'}
+                    </p>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  선택된 강의: {selectedLectures.length}개
+                </p>
+              </div>
+            </div>
+
             <div className="flex gap-2 pt-4">
-              <Button variant="outline" onClick={() => setRoleEditDialog(false)} className="flex-1">
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="flex-1">
                 취소
               </Button>
-              <Button onClick={handleSaveRoles} className="flex-1">
-                저장
+              <Button type="submit" className="flex-1">
+                {editingInstructor ? '수정' : '추가'}
               </Button>
             </div>
-          </DialogContent>
-        </Dialog>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Role Edit Dialog */}
+      <Dialog open={roleEditDialog} onOpenChange={setRoleEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>역할 수정</DialogTitle>
+            <DialogDescription>
+              {editingInstructorRoles?.instructorName}의 역할을 설정하세요.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {['instructor', 'admin', 'operator', 'director'].map((role) => (
+              <div key={role} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`role-${role}`}
+                  checked={selectedRoles.includes(role)}
+                  onCheckedChange={(checked) => handleRoleChange(role, !!checked)}
+                />
+                <Label htmlFor={`role-${role}`}>
+                  {role === 'instructor' ? '강사' :
+                    role === 'admin' ? '관리자' :
+                      role === 'director' ? '조직장' :
+                        role === 'operator' ? '운영' : role}
+                </Label>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button variant="outline" onClick={() => setRoleEditDialog(false)} className="flex-1">
+              취소
+            </Button>
+            <Button onClick={handleSaveRoles} className="flex-1">
+              저장
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 });
