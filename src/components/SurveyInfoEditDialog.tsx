@@ -37,11 +37,13 @@ export default function SurveyInfoEditDialog({ survey, open, onOpenChange }: Sur
   const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [courseName, setCourseName] = useState('');
 
   useEffect(() => {
     if (survey) {
       setTitle(survey.title);
       setDescription(survey.description || '');
+      setCourseName(survey.course_name || '');
     }
   }, [survey]);
 
@@ -54,6 +56,7 @@ export default function SurveyInfoEditDialog({ survey, open, onOpenChange }: Sur
         .update({
           title: title.trim(),
           description: description.trim() || null,
+          course_name: courseName.trim() || null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', survey.id);
@@ -92,6 +95,17 @@ export default function SurveyInfoEditDialog({ survey, open, onOpenChange }: Sur
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="설문 제목"
               />
+            </div>
+            <div>
+              <Label>과정명</Label>
+              <Input
+                value={courseName}
+                onChange={(e) => setCourseName(e.target.value)}
+                placeholder="과정명 (예: BS Basic)"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                통계 집계 시 사용되는 과정명입니다. 정확하게 입력해주세요.
+              </p>
             </div>
             <div>
               <Label>설명</Label>
