@@ -788,48 +788,50 @@ const Index = () => {
                 }, {} as Record<string, Survey[]>);
 
                 return Object.entries(groupedSurveys).map(([courseName, courseSurveys]) => (
-                  <div key={courseName} className="mb-8">
-                    <div className="mb-4">
-                      <h3 className="text-xl font-bold text-foreground font-display flex items-center gap-2">
-                        <BookOpen className="h-5 w-5 text-primary" />
-                        {courseName}
-                        <Badge variant="secondary" className="ml-2 font-sans">
+                  <div key={courseName} className="mb-6 md:mb-8">
+                    <div className="mb-3 md:mb-4">
+                      <h3 className="text-lg md:text-xl font-bold text-foreground font-display flex items-center gap-2">
+                        <BookOpen className="h-4 w-4 md:h-5 md:w-5 text-primary shrink-0" />
+                        <span className="truncate">{courseName}</span>
+                        <Badge variant="secondary" className="ml-2 font-sans shrink-0">
                           {courseSurveys.length}개
                         </Badge>
                       </h3>
                     </div>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-3 md:gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {courseSurveys.map((survey) => (
                         <Link
                           key={survey.id}
                           to={`/survey/${survey.id}`}
                           aria-label={`${survey.title} 설문 참여하기`}
-                          className="group block h-full cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                          className="group block h-full cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background min-w-0"
                         >
                           <Card className="flex h-full cursor-pointer flex-col transition-shadow group-hover:shadow-lg">
-                            <CardHeader>
-                              <div className="flex items-start justify-between gap-4">
-                                <CardTitle className="text-lg font-display truncate" title={survey.title}>
+                            <CardHeader className="p-4 md:p-6">
+                              <div className="flex items-start justify-between gap-3 md:gap-4 min-w-0">
+                                <CardTitle className="text-base md:text-lg font-display truncate min-w-0 flex-1" title={survey.title}>
                                   {survey.title}
                                 </CardTitle>
-                                {getStatusBadge(survey.status, survey.end_date)}
+                                <div className="shrink-0 scale-90 origin-top-right md:scale-100">
+                                  {getStatusBadge(survey.status, survey.end_date)}
+                                </div>
                               </div>
                               {survey.description && (
-                                <CardDescription className="font-sans truncate" title={survey.description}>
+                                <CardDescription className="font-sans text-xs md:text-sm truncate min-w-0" title={survey.description}>
                                   {survey.description}
                                 </CardDescription>
                               )}
                             </CardHeader>
-                            <CardContent className="flex h-full flex-col justify-between">
-                              <div className="space-y-2 text-sm font-sans">
+                            <CardContent className="flex h-full flex-col justify-between p-4 pt-0 md:p-6 md:pt-0">
+                              <div className="space-y-1.5 md:space-y-2 text-xs md:text-sm font-sans">
                                 {(() => {
                                   const instructorName = getInstructorNames(survey);
                                   if (!instructorName) {
                                     return null;
                                   }
                                   return (
-                                    <div className="flex items-center gap-2">
-                                      <Users className="h-4 w-4 text-muted-foreground" />
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <Users className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground shrink-0" />
                                       <span className="truncate" title={instructorName}>
                                         강사: {instructorName}
                                       </span>
@@ -837,23 +839,24 @@ const Index = () => {
                                   );
                                 })()}
                                 <div className="flex items-center gap-2">
-                                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                                  <span>생성일: {formatDate(survey.created_at)}</span>
+                                  <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground shrink-0" />
+                                  <span className="truncate">생성일: {formatDate(survey.created_at)}</span>
                                 </div>
                                 {(survey.start_date || survey.end_date) && (
-                                  <div className="flex items-center gap-2">
-                                    <Clock className="h-4 w-4 text-muted-foreground" />
-                                    <span>
+                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                    <Clock className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground shrink-0" />
+                                    <span className="truncate">
                                       {survey.start_date && `시작: ${formatDate(survey.start_date)}`}
-                                      {survey.start_date && survey.end_date && ' | '}
+                                      {survey.start_date && survey.end_date && <span className="mx-1 hidden md:inline">|</span>}
+                                      {survey.start_date && survey.end_date && <br className="md:hidden" />}
                                       {survey.end_date && `종료: ${formatDate(survey.end_date)}`}
                                     </span>
                                   </div>
                                 )}
                               </div>
-                              <div className="mt-4 flex items-center justify-between text-primary font-medium font-sans">
+                              <div className="mt-3 md:mt-4 flex items-center justify-between text-primary font-medium font-sans text-xs md:text-sm">
                                 <span>설문 참여하기</span>
-                                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                                <ArrowRight className="h-3.5 w-3.5 md:h-4 md:w-4" aria-hidden="true" />
                               </div>
                             </CardContent>
                           </Card>
