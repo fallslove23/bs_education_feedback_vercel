@@ -214,7 +214,7 @@ const SurveyParticipate = () => {
             setLoading(false);
             return;
           }
-        } catch {/* no-op */}
+        } catch {/* no-op */ }
       }
 
       const urlToken = searchParams.get('code');
@@ -230,7 +230,7 @@ const SurveyParticipate = () => {
           }
           setTokenValidated(true);
           setTokenCode(urlToken);
-        } catch {/* 검증 실패해도 설문은 로드 */}
+        } catch {/* 검증 실패해도 설문은 로드 */ }
       }
 
       await fetchSurveyData();
@@ -259,7 +259,7 @@ const SurveyParticipate = () => {
   const fetchSurveyData = async () => {
     try {
       console.log('🔍 익명 사용자 설문 접근 시도 - Survey ID:', surveyId);
-      
+
       const { data: surveyData, error: surveyError } = await supabase
         .from('surveys')
         .select(`
@@ -278,7 +278,7 @@ const SurveyParticipate = () => {
           .select('id')
           .eq('survey_id', surveyId)
           .limit(1);
-        
+
         if (sessionsData && sessionsData.length > 0) {
           console.log('🔄 세션 기반 설문 감지, 자동 리다이렉션');
           const currentParams = searchParams.toString();
@@ -363,7 +363,7 @@ const SurveyParticipate = () => {
 
       // 강사 정보 가져오기 - 단순하고 확실한 방법
       let instructorData = null;
-      
+
       // survey_instructors 테이블에서 강사 정보 조회
       const { data: surveyInstructors, error: siError } = await supabase
         .from('survey_instructors')
@@ -382,7 +382,7 @@ const SurveyParticipate = () => {
         const instructors = surveyInstructors
           .map(si => si.instructors)
           .filter(Boolean) as Instructor[];
-        
+
         if (instructors.length > 0) {
           instructorData = {
             id: instructors[0].id,
@@ -736,9 +736,31 @@ const SurveyParticipate = () => {
 
   const handlePrevious = () => setCurrentStep((p) => p - 1);
 
+  const isTestMode = searchParams.get('mode') === 'test';
+
   const handleSubmit = async () => {
     if (!validateCurrentStep()) {
       toast({ title: '필수 항목을 완성해 주세요', description: '모든 필수 질문에 답변해 주세요.', variant: 'destructive' });
+      return;
+    }
+
+    if (isTestMode) {
+      setSubmitting(true);
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      console.log('🧪 [TEST MODE] 설문 제출 시뮬레이션 완료');
+      console.log('Answers:', answers);
+
+      toast({ title: '[테스트] 설문 제출 완료', description: '테스트 모드이므로 데이터가 저장되지 않았습니다.' });
+
+      // 테스트 모드에서는 로컬 스토리지 완료 마킹을 하지 않아 반복 테스트 가능하게 함
+      // clearProgress({ notify: false }); // 테스트라 유지할지 클리어할지? 클리어하는게 깔끔하긴 함.
+      clearProgress({ notify: false });
+
+      // 완료 페이지로 이동 (테스트임을 알릴 수 있으면 좋지만 일단 완료 페이지만)
+      navigate('/survey-complete', { replace: true });
+      setSubmitting(false);
       return;
     }
 
@@ -749,14 +771,14 @@ const SurveyParticipate = () => {
       if (!survey || !survey.id) {
         throw new Error('설문 정보를 찾을 수 없습니다.');
       }
-      
+
       console.log('📝 응답 데이터 삽입 중...');
       const { data: responseData, error: responseError } = await supabase
         .from('survey_responses')
         .insert({ survey_id: survey.id, respondent_email: null })
         .select('id')
         .single();
-      
+
       if (responseError) {
         console.error('❌ 응답 데이터 삽입 실패:', responseError);
         throw responseError;
@@ -826,8 +848,8 @@ const SurveyParticipate = () => {
 
       console.log('🎉 설문 제출 완료!');
       clearProgress({ notify: false });
-      setSurveyPhase('completed');
-      // navigate('/'); // 바로 이동하지 않고 완료 화면 표시
+      // setSurveyPhase('completed'); 
+      navigate('/survey-complete', { replace: true });
     } catch (error) {
       console.error('💥 설문 제출 중 오류 발생:', error);
       console.error('오류 세부 정보:', {
@@ -836,10 +858,10 @@ const SurveyParticipate = () => {
         details: error?.details,
         hint: error?.hint
       });
-      toast({ 
-        title: '제출 중 오류가 발생했습니다', 
-        description: `오류: ${error?.message || '알 수 없는 오류'}`, 
-        variant: 'destructive' 
+      toast({
+        title: '제출 중 오류가 발생했습니다',
+        description: `오류: ${error?.message || '알 수 없는 오류'}`,
+        variant: 'destructive'
       });
     } finally {
       setSubmitting(false);
@@ -947,7 +969,7 @@ const SurveyParticipate = () => {
               </p>
             )}
           </CardHeader>
-          
+
           <CardContent className="space-y-6">
             {/* 설문 정보 */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
@@ -1039,7 +1061,7 @@ const SurveyParticipate = () => {
               소중한 의견을 주셔서 진심으로 감사합니다
             </p>
           </CardHeader>
-          
+
           <CardContent className="space-y-6">
             {/* 완료 메시지 */}
             <div className="text-center space-y-4">
@@ -1048,7 +1070,7 @@ const SurveyParticipate = () => {
                   응답이 성공적으로 제출되었습니다
                 </h3>
                 <p className="text-sm text-green-700 dark:text-green-300 leading-relaxed">
-                  여러분의 의견은 교육 품질 향상을 위해 소중히 활용됩니다. 
+                  여러분의 의견은 교육 품질 향상을 위해 소중히 활용됩니다.
                   더 나은 교육 환경을 만들어 나가는데 큰 도움이 됩니다.
                 </p>
               </div>
@@ -1081,8 +1103,8 @@ const SurveyParticipate = () => {
 
             {/* 홈으로 돌아가기 버튼 */}
             <div className="text-center pt-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="lg"
                 onClick={() => navigate('/')}
                 className="px-8"
@@ -1228,14 +1250,13 @@ const SurveyParticipate = () => {
   // 에러 또는 설문 데이터 없음
   if (error || !survey) {
     const isTimeError = error && (error.includes('시작 시간이') || error.includes('종료되었습니다'));
-    
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 p-4">
         <Card className="max-w-md mx-auto shadow-lg">
           <CardContent className="p-8 text-center">
-            <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
-              isTimeError ? 'bg-orange-100' : 'bg-destructive/10'
-            }`}>
+            <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${isTimeError ? 'bg-orange-100' : 'bg-destructive/10'
+              }`}>
               {isTimeError ? (
                 <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1246,15 +1267,15 @@ const SurveyParticipate = () => {
                 </svg>
               )}
             </div>
-            
+
             <h2 className="text-xl font-semibold mb-2 text-foreground">
               {isTimeError ? '설문 참여 시간 안내' : '설문 접근 오류'}
             </h2>
-            
+
             <p className="text-muted-foreground mb-6 leading-relaxed">
               {error || '설문을 불러올 수 없습니다. 링크를 다시 확인하거나 관리자에게 문의해주세요.'}
             </p>
-            
+
             {isTimeError && (
               <Alert className="mb-6 text-left">
                 <AlertCircle className="h-4 w-4" />
@@ -1270,13 +1291,31 @@ const SurveyParticipate = () => {
                 </AlertDescription>
               </Alert>
             )}
-            
+
             <div className="space-y-3">
               <Button onClick={() => window.location.reload()} variant="outline" className="w-full">
                 페이지 새로고침
               </Button>
               <Button onClick={() => window.location.href = '/'} className="w-full">
                 메인 페이지로 이동
+              </Button>
+            </div>
+
+            <div className="pt-4 border-t mt-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-muted-foreground w-full hover:text-destructive hover:bg-destructive/5"
+                onClick={() => {
+                  if (confirm('설문 진행 데이터가 초기화됩니다. 계속하시겠습니까?')) {
+                    if (autosaveKey) localStorage.removeItem(autosaveKey);
+                    if (completedKey) localStorage.removeItem(completedKey);
+                    window.location.reload();
+                  }
+                }}
+              >
+                <RotateCcw className="w-3 h-3 mr-1" />
+                설문 데이터 초기화 (오류 해결용)
               </Button>
             </div>
           </CardContent>
@@ -1288,6 +1327,11 @@ const SurveyParticipate = () => {
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       <header className="border-b bg-white/95 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
+        {isTestMode && (
+          <div className="bg-orange-100 text-orange-800 text-xs px-4 py-1 text-center font-medium border-b border-orange-200">
+            🧪 테스트 모드입니다. 응답 데이터가 저장되지 않습니다.
+          </div>
+        )}
         <div className="container mx-auto px-3 sm:px-4 py-3 flex items-center gap-4 max-w-full overflow-hidden">
           <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="shrink-0">
             <ArrowLeft className="h-5 w-5" />

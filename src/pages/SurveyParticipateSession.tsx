@@ -197,7 +197,7 @@ const SurveyParticipateSession = () => {
             setLoading(false);
             return;
           }
-        } catch {/* no-op */}
+        } catch {/* no-op */ }
       }
 
       const urlToken = searchParams.get('code');
@@ -213,7 +213,7 @@ const SurveyParticipateSession = () => {
           }
           setTokenValidated(true);
           setTokenCode(urlToken);
-        } catch {/* 검증 실패해도 설문은 로드 */}
+        } catch {/* 검증 실패해도 설문은 로드 */ }
       }
 
       await fetchSurveyData();
@@ -534,9 +534,28 @@ const SurveyParticipateSession = () => {
     scrollToTop();
   };
 
+  const isTestMode = searchParams.get('mode') === 'test';
+
   const handleSubmit = async () => {
     if (!validateCurrentQuestions()) {
       toast({ title: '필수 항목을 완성해 주세요', description: '모든 필수 답변을 입력해 주세요.', variant: 'destructive' });
+      return;
+    }
+
+    if (isTestMode) {
+      setSubmitting(true);
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      console.log('🧪 [TEST MODE] 세션 설문 제출 시뮬레이션 완료');
+      console.log('Answers:', answers);
+
+      toast({ title: '[테스트] 설문 제출 완료', description: '테스트 모드이므로 데이터가 저장되지 않았습니다.' });
+
+      // navigate('/survey-complete', { replace: true }); // 테스트라 유지할지 말지? 사용성에 따라 다름.
+      // 여기선 그냥 완료 페이지로 이동시키는게 깔끔.
+      navigate('/survey-complete', { replace: true });
+      setSubmitting(false);
       return;
     }
 
@@ -560,7 +579,7 @@ const SurveyParticipateSession = () => {
 
         // 운영 문항이거나 session_id가 없는 경우 'operation_common'으로 그룹화
         const sessionKey = question.session_id || 'operation_common';
-        
+
         if (!sessionGroups.has(sessionKey)) {
           sessionGroups.set(sessionKey, []);
         }
@@ -572,9 +591,9 @@ const SurveyParticipateSession = () => {
       // 각 세션별로 별도의 응답 생성
       for (const [sessionId, sessionAnswers] of sessionGroups.entries()) {
         const actualSessionId = sessionId === 'operation_common' ? null : sessionId;
-        
+
         console.log(`📝 세션 ${sessionId} 응답 데이터 삽입 중... (${sessionAnswers.length}개 답변)`);
-        
+
         // survey_responses에 직접 삽입 (session_id 포함)
         const { data: responseData, error: responseError } = await supabase
           .from('survey_responses')
@@ -586,12 +605,12 @@ const SurveyParticipateSession = () => {
           })
           .select('id')
           .single();
-        
+
         if (responseError) {
           console.error('❌ 응답 데이터 삽입 실패:', responseError);
           throw responseError;
         }
-        
+
         const responseId = responseData.id;
         console.log(`✅ 세션 ${sessionId} 응답 데이터 삽입 성공:`, responseId);
 
@@ -657,7 +676,7 @@ const SurveyParticipateSession = () => {
 
       console.log('🎉 세션 설문 제출 완료! 총', sessionGroups.size, '개 세션 응답 생성');
       toast({ title: '설문 참여 완료!', description: '소중한 의견을 주셔서 감사합니다.' });
-      navigate('/');
+      navigate('/survey-complete', { replace: true });
     } catch (error) {
       console.error('💥 세션 설문 제출 중 오류 발생:', error);
       console.error('오류 세부 정보:', {
@@ -666,10 +685,10 @@ const SurveyParticipateSession = () => {
         details: error?.details,
         hint: error?.hint
       });
-      toast({ 
-        title: '제출 중 오류가 발생했습니다', 
-        description: `오류: ${error?.message || '알 수 없는 오류'}`, 
-        variant: 'destructive' 
+      toast({
+        title: '제출 중 오류가 발생했습니다',
+        description: `오류: ${error?.message || '알 수 없는 오류'}`,
+        variant: 'destructive'
       });
     } finally {
       setSubmitting(false);
@@ -850,7 +869,27 @@ const SurveyParticipateSession = () => {
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-2">설문을 찾을 수 없습니다</h1>
           <p className="text-muted-foreground mb-4">요청하신 설문이 존재하지 않거나 삭제되었습니다.</p>
-          <Button onClick={() => navigate('/')}>홈으로 돌아가기</Button>
+          <div className="space-y-3">
+            <Button onClick={() => navigate('/')} className="w-full">홈으로 돌아가기</Button>
+          </div>
+          <div className="pt-4 border-t mt-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground w-full hover:text-destructive hover:bg-destructive/5"
+              onClick={() => {
+                if (confirm('설문 진행 데이터가 초기화됩니다. 계속하시겠습니까?')) {
+                  // 세션형은 autosaveKey 변수가 없으므로 직접 키 조합
+                  if (surveyId) localStorage.removeItem(`survey_autosave_${surveyId}`);
+                  if (completedKey) localStorage.removeItem(completedKey);
+                  window.location.reload();
+                }
+              }}
+            >
+              <RotateCcw className="w-3 h-3 mr-1" />
+              설문 데이터 초기화 (오류 해결용)
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -860,6 +899,11 @@ const SurveyParticipateSession = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-blue-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
+      {isTestMode && (
+        <div className="bg-orange-100 text-orange-800 text-xs px-4 py-1 text-center font-medium border-b border-orange-200">
+          🧪 테스트 모드입니다. 응답 데이터가 저장되지 않습니다.
+        </div>
+      )}
       <main className="mx-auto max-w-6xl px-4 py-6 lg:py-12">
         <div className="mb-6 flex items-center justify-between">
           <Button variant="ghost" onClick={() => navigate('/')}>

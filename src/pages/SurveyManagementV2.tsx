@@ -30,6 +30,7 @@ import {
   Play,
   Pause,
   MoreHorizontal,
+  FlaskConical,
 } from "lucide-react";
 import { getSurveyUrl } from '@/lib/utils';
 
@@ -247,7 +248,7 @@ export default function SurveyManagementV2() {
   const [availableSessions, setAvailableSessions] = useState<{ value: string; label: string }[]>([]);
   const [availablePrograms, setAvailablePrograms] = useState<string[]>([]);  // 빠른 생성용 프로그램 목록
   const [templates, setTemplates] = useState<TemplateLite[]>([]);
-  
+
   // 서버 페이지네이션을 위한 새로운 상태
   const [useVirtualScroll, setUseVirtualScroll] = useState(false);
 
@@ -520,7 +521,7 @@ export default function SurveyManagementV2() {
       const url = getSurveyUrl(surveyId);
       const response = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(url)}`);
       const blob = await response.blob();
-      
+
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = `survey-qr-${surveyId}.png`;
@@ -528,7 +529,7 @@ export default function SurveyManagementV2() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(link.href);
-      
+
       toast({
         title: "QR 코드 다운로드 완료",
         description: "QR 코드가 성공적으로 다운로드되었습니다.",
@@ -559,10 +560,10 @@ export default function SurveyManagementV2() {
   // 서버 페이지네이션 페치 함수
   const fetchSurveysWithPagination = useCallback(async (params: ServerPaginationParams) => {
     const result = await SurveysRepository.fetchSurveyList(
-      params.page, 
-      params.pageSize, 
-      filters, 
-      sortBy, 
+      params.page,
+      params.pageSize,
+      filters,
+      sortBy,
       sortDir
     );
     return {
@@ -620,14 +621,14 @@ export default function SurveyManagementV2() {
           .select('session_id, program, turn, year')
           .order('program', { ascending: true })
           .order('turn', { ascending: true });
-        
+
         // year가 null이 아닐 때만 필터링
         if (year !== null) {
           query = query.eq('year', year);
         }
-        
+
         const { data: sess, error: sessErr } = await query;
-        
+
         if (!sessErr) {
           sessionOptions = (sess || []).map((row: any) => ({
             value: row.session_id,
@@ -659,15 +660,15 @@ export default function SurveyManagementV2() {
     }
   };
 
-  useEffect(() => { 
-    paginationHook.refresh(); 
+  useEffect(() => {
+    paginationHook.refresh();
   }, [filters.year, filters.status, filters.q, filters.sessionId, sortBy, sortDir]);
-  
-  useEffect(() => { 
-    paginationHook.goToPage(currentPage); 
+
+  useEffect(() => {
+    paginationHook.goToPage(currentPage);
   }, [currentPage]);
   useEffect(() => { loadSessions(filters.year); }, [filters.year]);
-useEffect(() => { loadPrograms(); }, []);
+  useEffect(() => { loadPrograms(); }, []);
   useEffect(() => { loadData(); }, []); // 초기 로드 시 availableYears 설정
   useEffect(() => { (async () => setTemplates(await SurveysRepository.listTemplates()))(); }, []);
   useEffect(() => { fetchFilterPresets(); }, [fetchFilterPresets]);
@@ -719,13 +720,13 @@ useEffect(() => { loadPrograms(); }, []);
     // DB의 실제 상태를 우선 사용 - 시간 계산은 보조적으로만 사용
     if (s.status === "draft") return STATUS_CONFIG.draft;
     if (s.status === "completed") return STATUS_CONFIG.completed;
-    
+
     // active/public 상태에서만 시간 기반 세부 상태 체크
     if (s.status === "active" || s.status === "public") {
       const now = new Date();
       const start = s.start_date ? new Date(s.start_date) : null;
       const end = s.end_date ? new Date(s.end_date) : null;
-      
+
       // 시작 전
       if (start && now < start) return STATUS_CONFIG.scheduled;
       // 종료 후
@@ -733,7 +734,7 @@ useEffect(() => { loadPrograms(); }, []);
       // 진행 중
       return STATUS_CONFIG.active;
     }
-    
+
     // 기본값
     return STATUS_CONFIG.draft;
   };
@@ -832,24 +833,24 @@ useEffect(() => { loadPrograms(); }, []);
 
   const handleDeleteSurvey = async () => {
     if (!deletingSurveyId) return;
-    
+
     try {
       // 단일 설문 삭제 또는 다중 설문 삭제 처리
       const isMultiple = deletingSurveyId.includes(',');
       const surveyIds = isMultiple ? deletingSurveyId.split(',') : [deletingSurveyId];
-      
+
       const { error } = await supabase
         .from('surveys')
         .delete()
         .in('id', surveyIds);
-      
+
       if (error) throw error;
-      
+
       toast({
         title: "삭제 완료",
         description: `${surveyIds.length}개 설문이 성공적으로 삭제되었습니다.`
       });
-      
+
       setDeleteOpen(false);
       setDeletingSurveyId(null);
       setSelected(new Set()); // 선택 해제
@@ -866,20 +867,20 @@ useEffect(() => { loadPrograms(); }, []);
 
   const handleStatusToggle = async (surveyId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'draft' : 'active';
-    
+
     try {
       const { error } = await supabase
         .from('surveys')
         .update({ status: newStatus })
         .eq('id', surveyId);
-      
+
       if (error) throw error;
-      
+
       toast({
         title: "상태 변경 완료",
         description: `설문이 ${newStatus === 'active' ? '활성화' : '비활성화'}되었습니다.`
       });
-      
+
       loadData();
     } catch (error) {
       console.error('Error updating survey status:', error);
@@ -907,14 +908,14 @@ useEffect(() => { loadPrograms(); }, []);
         .from('surveys')
         .update({ status: newStatus })
         .in('id', surveyIds);
-      
+
       if (error) throw error;
-      
+
       toast({
         title: "일괄 상태 변경 완료",
         description: `${surveyIds.length}개 설문이 ${newStatus === 'active' ? '활성화' : '비활성화'}되었습니다.`
       });
-      
+
       setSelected(new Set());
       loadData();
     } catch (error) {
@@ -935,9 +936,9 @@ useEffect(() => { loadPrograms(); }, []);
         .select('*')
         .eq('id', surveyId)
         .single();
-      
+
       if (surveyError) throw surveyError;
-      
+
       // 새 설문 생성
       const { data: newSurvey, error: createError } = await supabase
         .from('surveys')
@@ -951,14 +952,14 @@ useEffect(() => { loadPrograms(); }, []);
         })
         .select()
         .single();
-      
+
       if (createError) throw createError;
-      
+
       toast({
         title: "복제 완료",
         description: "설문이 성공적으로 복제되었습니다."
       });
-      
+
       navigate(`/survey-builder/${newSurvey.id}`);
     } catch (error) {
       console.error('Error duplicating survey:', error);
@@ -972,7 +973,7 @@ useEffect(() => { loadPrograms(); }, []);
 
   if (loading) {
     return (
-      <DashboardLayout 
+      <DashboardLayout
         title="설문 관리"
         description="전체 설문 생성 및 관리 그리고 통계 확인할 수 있습니다"
         loading={true}
@@ -997,7 +998,7 @@ useEffect(() => { loadPrograms(); }, []);
   const q = filters.q ?? "";
 
   return (
-    <DashboardLayout 
+    <DashboardLayout
       title="설문 관리"
       description="전체 설문 생성 및 관리 그리고 통계 확인할 수 있습니다"
       icon={<Plus className="h-5 w-5" />}
@@ -1220,9 +1221,8 @@ useEffect(() => { loadPrograms(); }, []);
                       return (
                         <div
                           key={preset.id}
-                          className={`rounded-lg border p-4 transition-colors ${
-                            activePresetId === preset.id ? "border-primary bg-primary/5" : ""
-                          }`}
+                          className={`rounded-lg border p-4 transition-colors ${activePresetId === preset.id ? "border-primary bg-primary/5" : ""
+                            }`}
                         >
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
@@ -1321,14 +1321,14 @@ useEffect(() => { loadPrograms(); }, []);
                         const selectedSurveys = surveys.filter(s => selected.has(s.id));
                         const activeCount = selectedSurveys.filter(s => s.status === 'active').length;
                         const inactiveCount = selectedSurveys.length - activeCount;
-                        
+
                         // 대부분이 활성화된 경우 비활성화, 그렇지 않으면 활성화
                         const newStatus = activeCount > inactiveCount ? 'draft' : 'active';
                         handleBulkStatusChange(Array.from(selected), newStatus);
                       }}
                     >
-                      {surveys.filter(s => selected.has(s.id) && s.status === 'active').length > 
-                       surveys.filter(s => selected.has(s.id) && s.status !== 'active').length ? (
+                      {surveys.filter(s => selected.has(s.id) && s.status === 'active').length >
+                        surveys.filter(s => selected.has(s.id) && s.status !== 'active').length ? (
                         <>
                           <Pause className="h-4 w-4 mr-1" />
                           일괄 비활성화
@@ -1474,8 +1474,8 @@ useEffect(() => { loadPrograms(); }, []);
                         <Button
                           variant="default"
                           size="sm"
-                          onClick={() => navigate(`/survey-detailed-analysis/${survey.id}`, { 
-                            state: { from: 'survey-management' } 
+                          onClick={() => navigate(`/survey-detailed-analysis/${survey.id}`, {
+                            state: { from: 'survey-management' }
                           })}
                         >
                           <BarChart className="h-4 w-4 mr-1" />
@@ -1490,6 +1490,13 @@ useEffect(() => { loadPrograms(); }, []);
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>작업</DropdownMenuLabel>
                             <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => {
+                              const surveyUrl = getSurveyUrl(survey.id);
+                              window.open(`${surveyUrl}?mode=test`, '_blank');
+                            }}>
+                              <FlaskConical className="h-4 w-4 mr-2" />
+                              테스트 모드
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => navigate(`/survey-builder/${survey.id}`)}>
                               <Settings className="h-4 w-4 mr-2" />
                               편집
@@ -1521,7 +1528,7 @@ useEffect(() => { loadPrograms(); }, []);
                               {survey.status === 'active' ? '비활성화' : '활성화'}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => {
                                 setDeletingSurveyId(survey.id);
                                 setDeleteOpen(true);
@@ -1587,8 +1594,8 @@ useEffect(() => { loadPrograms(); }, []);
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => navigate(`/survey-detailed-analysis/${survey.id}`, { 
-                          state: { from: 'survey-management' } 
+                        onClick={() => navigate(`/survey-detailed-analysis/${survey.id}`, {
+                          state: { from: 'survey-management' }
                         })}
                       >
                         <BarChart className="h-4 w-4 mr-1" />
@@ -1603,6 +1610,13 @@ useEffect(() => { loadPrograms(); }, []);
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>작업</DropdownMenuLabel>
                           <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => {
+                            const surveyUrl = getSurveyUrl(survey.id);
+                            window.open(`${surveyUrl}?mode=test`, '_blank');
+                          }}>
+                            <FlaskConical className="h-4 w-4 mr-2" />
+                            테스트 모드
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigate(`/survey-builder/${survey.id}`)}>
                             <Settings className="h-4 w-4 mr-2" />
                             편집
@@ -1634,7 +1648,7 @@ useEffect(() => { loadPrograms(); }, []);
                             {survey.status === 'active' ? '비활성화' : '활성화'}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={() => {
                               setDeletingSurveyId(survey.id);
                               setDeleteOpen(true);
@@ -1685,8 +1699,8 @@ useEffect(() => { loadPrograms(); }, []);
 
         {/* 설문 생성 시트 */}
         <Sheet open={createOpen} onOpenChange={setCreateOpen}>
-          <SheetContent 
-            side="right" 
+          <SheetContent
+            side="right"
             className="w-full sm:max-w-2xl overflow-y-auto"
             style={{ maxHeight: '100vh' }}
           >
@@ -1714,7 +1728,7 @@ useEffect(() => { loadPrograms(); }, []);
             <DialogHeader>
               <DialogTitle>설문 삭제</DialogTitle>
               <DialogDescription>
-                {deletingSurveyId?.includes(',') 
+                {deletingSurveyId?.includes(',')
                   ? `선택한 ${deletingSurveyId.split(',').length}개 설문을 삭제하시겠습니까?`
                   : '정말로 이 설문을 삭제하시겠습니까?'
                 } 이 작업은 되돌릴 수 없습니다.
@@ -1743,7 +1757,7 @@ useEffect(() => { loadPrograms(); }, []);
             <div className="flex flex-col items-center space-y-4">
               {qrSurveyId && (
                 <div className="p-4 bg-white rounded-lg border">
-                  <img 
+                  <img
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(getSurveyUrl(qrSurveyId))}`}
                     alt="QR Code"
                     className="w-48 h-48"
@@ -1757,7 +1771,7 @@ useEffect(() => { loadPrograms(); }, []);
                 </p>
               </div>
               <div className="flex space-x-2 w-full">
-                <Button 
+                <Button
                   onClick={() => handleCopyLink(qrSurveyId!)}
                   variant="outline"
                   className="flex-1"
@@ -1765,7 +1779,7 @@ useEffect(() => { loadPrograms(); }, []);
                   <Copy className="h-4 w-4 mr-2" />
                   링크 복사
                 </Button>
-                <Button 
+                <Button
                   onClick={() => handleDownloadQR(qrSurveyId!)}
                   className="flex-1"
                 >

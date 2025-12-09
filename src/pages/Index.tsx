@@ -191,14 +191,9 @@ const Index = () => {
       }
 
       if (timeFilter === 'today') {
-        const today = new Date();
-        const start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
-        const end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
-        const startIso = start.toISOString();
-        const endIso = end.toISOString();
-        query = query.or(
-          `and(start_date.gte.${startIso},start_date.lte.${endIso}),and(start_date.is.null,created_at.gte.${startIso},created_at.lte.${endIso})`,
-        );
+        // DB 쿼리 대신 받아온 데이터에서 JS로 필터링합니다.
+        // 이를 통해 "오늘 시작한 설문" 뿐만 아니라 "오늘 진행 중인(걸쳐있는) 설문"까지 포함합니다.
+        // 또한 UTC/KST 시간대 변환 문제도 JS Date 객체로 더 유연하게 처리할 수 있습니다.
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -207,7 +202,31 @@ const Index = () => {
         throw error;
       }
 
-      setSurveys(data ?? []);
+      let filteredData = data ?? [];
+
+      if (timeFilter === 'today') {
+        const today = new Date();
+        const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+        const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+
+        filteredData = filteredData.filter((survey) => {
+          // start_date가 없으면 created_at을 시작일로 간주
+          const startDate = survey.start_date
+            ? new Date(survey.start_date)
+            : new Date(survey.created_at);
+
+          // end_date가 없으면(null) 무기한으로 간주하여 아주 먼 미래로 설정
+          const endDate = survey.end_date
+            ? new Date(survey.end_date)
+            : new Date(8640000000000000); // Max Date
+
+          // [오늘 시작, 오늘 끝] 기간과 [설문 시작, 설문 끝] 기간이 겹치는지 확인
+          // 조건: 설문 시작 <= 오늘 끝 AND 설문 끝 >= 오늘 시작
+          return startDate <= endOfToday && endDate >= startOfToday;
+        });
+      }
+
+      setSurveys(filteredData);
     } catch (error) {
       console.error('Error fetching surveys:', error);
       setFetchError('설문 데이터를 불러오는 중 오류가 발생했습니다.');
@@ -410,7 +429,7 @@ const Index = () => {
         return <Badge variant="secondary" className="font-sans">완료됨</Badge>;
       }
     }
-    
+
     switch (status) {
       case 'active':
         return <Badge variant="default" className="font-sans">진행중</Badge>;
@@ -648,89 +667,89 @@ const Index = () => {
                   검색어나 조건을 선택해 원하는 설문을 찾아보세요.
                 </CardDescription>
               </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <div className="md:col-span-2">
-                  <label className="text-sm font-medium font-sans" htmlFor="survey-search">
-                    검색어
-                  </label>
-                  <div className="relative mt-1">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      id="survey-search"
-                      value={searchTerm}
-                      onChange={(event) => setSearchTerm(event.target.value)}
-                      placeholder="설문 제목이나 설명을 입력하세요"
-                      className="pl-9 font-sans"
-                    />
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-medium font-sans" htmlFor="survey-search">
+                      검색어
+                    </label>
+                    <div className="relative mt-1">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="survey-search"
+                        value={searchTerm}
+                        onChange={(event) => setSearchTerm(event.target.value)}
+                        placeholder="설문 제목이나 설명을 입력하세요"
+                        className="pl-9 font-sans"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium font-sans">상태</label>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="mt-1 font-sans">
+                        <SelectValue placeholder="상태를 선택하세요" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {statusOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value} className="font-sans">
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium font-sans">강사</label>
+                    <Select value={instructorFilter} onValueChange={setInstructorFilter}>
+                      <SelectTrigger className="mt-1 font-sans">
+                        <SelectValue placeholder="강사를 선택하세요" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all" className="font-sans">
+                          전체 강사
+                        </SelectItem>
+                        {instructors.map((instructor) => (
+                          <SelectItem key={instructor.id} value={instructor.id} className="font-sans">
+                            {instructor.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium font-sans">과정</label>
+                    <Select value={courseFilter} onValueChange={setCourseFilter}>
+                      <SelectTrigger className="mt-1 font-sans">
+                        <SelectValue placeholder="과정을 선택하세요" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all" className="font-sans">
+                          전체 과정
+                        </SelectItem>
+                        {courses.map((course) => (
+                          <SelectItem key={course.id} value={course.id} className="font-sans">
+                            {course.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-sm font-medium font-sans">상태</label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="mt-1 font-sans">
-                      <SelectValue placeholder="상태를 선택하세요" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {statusOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value} className="font-sans">
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+                  <span className="text-sm text-muted-foreground font-sans">
+                    총 {surveys.length}개의 설문이 검색되었습니다.
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={resetFilters} className="font-sans">
+                    필터 초기화
+                  </Button>
                 </div>
-
-                <div>
-                  <label className="text-sm font-medium font-sans">강사</label>
-                  <Select value={instructorFilter} onValueChange={setInstructorFilter}>
-                    <SelectTrigger className="mt-1 font-sans">
-                      <SelectValue placeholder="강사를 선택하세요" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all" className="font-sans">
-                        전체 강사
-                      </SelectItem>
-                      {instructors.map((instructor) => (
-                        <SelectItem key={instructor.id} value={instructor.id} className="font-sans">
-                          {instructor.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium font-sans">과정</label>
-                  <Select value={courseFilter} onValueChange={setCourseFilter}>
-                    <SelectTrigger className="mt-1 font-sans">
-                      <SelectValue placeholder="과정을 선택하세요" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all" className="font-sans">
-                        전체 과정
-                      </SelectItem>
-                      {courses.map((course) => (
-                        <SelectItem key={course.id} value={course.id} className="font-sans">
-                          {course.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-                <span className="text-sm text-muted-foreground font-sans">
-                  총 {surveys.length}개의 설문이 검색되었습니다.
-                </span>
-                <Button variant="ghost" size="sm" onClick={resetFilters} className="font-sans">
-                  필터 초기화
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
           )}
 
           {surveys.length === 0 ? (

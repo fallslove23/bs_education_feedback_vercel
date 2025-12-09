@@ -45,6 +45,7 @@ const SurveyDetailedAnalysis = lazy(() => import("./pages/SurveyDetailedAnalysis
 const DeveloperTestScreen = lazy(() => import("./pages/DeveloperTestScreen"));
 const ShortUrlRedirect = lazy(() => import("./pages/ShortUrlRedirect"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const SurveyComplete = lazy(() => import("./pages/SurveyComplete"));
 
 const queryClient = new QueryClient();
 
@@ -205,6 +206,7 @@ function AppContent() {
 
         <Route path="/survey/:surveyId" element={<SurveyParticipate />} />
         <Route path="/survey-session/:surveyId" element={<SurveyParticipateSession />} />
+        <Route path="/survey-complete" element={<SurveyComplete />} />
 
         {/* 짧은 URL 리다이렉트 라우트 */}
         <Route path="/s/:shortCode" element={<ShortUrlRedirect />} />
