@@ -120,6 +120,12 @@ export const CourseNamesRepo = {
 };
 
 export const SurveysRepository = {
+  async listPrograms(): Promise<{ id: string; name: string }[]> {
+    const { data, error } = await supabase.from('programs').select('id, name').order('name');
+    if (error) throw error;
+    return (data || []) as { id: string; name: string }[];
+  },
+
   async fetchSurveyList(
     page: number,
     pageSize: number,

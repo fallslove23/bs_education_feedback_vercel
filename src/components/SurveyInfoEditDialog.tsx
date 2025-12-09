@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { SurveysRepository } from '@/repositories/surveysRepo';
 
 type SurveyEditable = {
   id: string;
@@ -18,6 +20,7 @@ type SurveyEditable = {
   education_day: number | null;
   course_id: string | null;
   course_name: string | null;
+  program_id: string | null;
   instructor_id: string | null;
   expected_participants: number | null;
   is_combined: boolean | null;
@@ -38,12 +41,21 @@ export default function SurveyInfoEditDialog({ survey, open, onOpenChange }: Sur
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [courseName, setCourseName] = useState('');
+  const [programs, setPrograms] = useState<{ id: string; name: string }[]>([]);
+  const [programId, setProgramId] = useState<string>('none');
+
+  useEffect(() => {
+    if (open) {
+      SurveysRepository.listPrograms().then(setPrograms).catch(console.error);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (survey) {
       setTitle(survey.title);
       setDescription(survey.description || '');
       setCourseName(survey.course_name || '');
+      setProgramId(survey.program_id || 'none');
     }
   }, [survey]);
 
@@ -57,6 +69,7 @@ export default function SurveyInfoEditDialog({ survey, open, onOpenChange }: Sur
           title: title.trim(),
           description: description.trim() || null,
           course_name: courseName.trim() || null,
+          program_id: programId === 'none' ? null : programId,
           updated_at: new Date().toISOString(),
         })
         .eq('id', survey.id);
@@ -96,15 +109,45 @@ export default function SurveyInfoEditDialog({ survey, open, onOpenChange }: Sur
                 placeholder="설문 제목"
               />
             </div>
+
             <div>
-              <Label>과정명</Label>
+              <Label>정규 과정 (Standard Course)</Label>
+              <Select
+                value={programId}
+                onValueChange={(v) => {
+                  setProgramId(v);
+                  if (v !== 'none') {
+                    const p = programs.find(p => p.id === v);
+                    if (p) {
+                      setCourseName(p.name);
+                    }
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="과정(프로그램) 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">선택 안함 (직접 입력)</SelectItem>
+                  {programs.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                정규 과정을 선택하면 통계가 해당 과정으로 정확하게 집계됩니다.
+              </p>
+            </div>
+
+            <div>
+              <Label>과정명 (Display Name)</Label>
               <Input
                 value={courseName}
                 onChange={(e) => setCourseName(e.target.value)}
                 placeholder="과정명 (예: BS Basic)"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                통계 집계 시 사용되는 과정명입니다. 정확하게 입력해주세요.
+                통계 집계 시 사용되는 과정명입니다. 정규 과정을 선택하면 자동으로 입력됩니다.
               </p>
             </div>
             <div>
