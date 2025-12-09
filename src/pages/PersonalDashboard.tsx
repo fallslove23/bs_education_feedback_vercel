@@ -18,7 +18,6 @@ import { Award, BarChart3, TrendingUp, Users, Download, HelpCircle } from 'lucid
 import { useAuth } from '@/hooks/useAuth';
 import { useInstructorStats } from '@/hooks/useInstructorStats';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useTestDataToggle } from '@/hooks/useTestDataToggle';
 import { useMyStats } from '@/hooks/useMyStats';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,7 +34,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { TestDataToggle } from '@/components/TestDataToggle';
 import { ChartEmptyState } from '@/components/charts';
 import { getCombinedRecordMetrics } from '@/utils/surveyStats';
 
@@ -139,7 +137,6 @@ function DisabledFiltersNotice() {
 export default function PersonalDashboard() {
   const { instructorId } = useAuth();
   const { data: myStatsData } = useMyStats();
-  const testDataOptions = useTestDataToggle();
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
@@ -154,15 +151,12 @@ export default function PersonalDashboard() {
 
   const stats = useInstructorStats({
     instructorId: instructorId ?? undefined,
-    includeTestData: testDataOptions.includeTestData,
+    includeTestData: false,
     filters,
     enabled: Boolean(instructorId),
   });
 
-  const usingTestData = useMemo(() => {
-    if (!testDataOptions.includeTestData) return false;
-    return stats.filteredRecords.some(record => getCombinedRecordMetrics(record, true).source === 'test');
-  }, [stats.filteredRecords, testDataOptions.includeTestData]);
+
 
   const handleDownload = useCallback(() => {
     const csvRows = [
@@ -234,14 +228,8 @@ export default function PersonalDashboard() {
               {myStatsData.instructor_name}
             </Badge>
           )}
-          {usingTestData && (
-            <Badge variant="outline" className="text-xs">
-              테스트 데이터 포함
-            </Badge>
-          )}
         </div>
         <div className="flex gap-2">
-          <TestDataToggle testDataOptions={testDataOptions} />
           <Button
             variant="outline"
             size="sm"
@@ -346,27 +334,27 @@ export default function PersonalDashboard() {
                 <ChartEmptyState description="추이 데이터가 없습니다" />
               ) : (
                 <ResponsiveContainer width="100%" height={isMobile ? 250 : 300}>
-                  <LineChart data={stats.trend} margin={{ 
-                    top: 5, 
-                    right: isMobile ? 5 : 10, 
-                    left: isMobile ? -20 : 0, 
-                    bottom: isMobile ? 5 : 5 
+                  <LineChart data={stats.trend} margin={{
+                    top: 5,
+                    right: isMobile ? 5 : 10,
+                    left: isMobile ? -20 : 0,
+                    bottom: isMobile ? 5 : 5
                   }}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis 
-                      dataKey="period" 
+                    <XAxis
+                      dataKey="period"
                       className="text-xs"
                       tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isMobile ? 10 : 12 }}
                       angle={isMobile ? -45 : 0}
                       textAnchor={isMobile ? 'end' : 'middle'}
                       height={isMobile ? 60 : 30}
                     />
-                    <YAxis 
+                    <YAxis
                       className="text-xs"
                       tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isMobile ? 10 : 12 }}
                       width={isMobile ? 40 : 60}
                     />
-                    <Tooltip 
+                    <Tooltip
                       contentStyle={{
                         backgroundColor: 'hsl(var(--background))',
                         border: '1px solid hsl(var(--border))',
@@ -374,10 +362,10 @@ export default function PersonalDashboard() {
                         fontSize: isMobile ? '12px' : '14px',
                       }}
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="satisfaction" 
-                      stroke="hsl(var(--primary))" 
+                    <Line
+                      type="monotone"
+                      dataKey="satisfaction"
+                      stroke="hsl(var(--primary))"
                       strokeWidth={isMobile ? 2 : 2}
                       name="만족도"
                       dot={{ fill: 'hsl(var(--primary))', r: isMobile ? 3 : 4 }}
@@ -416,7 +404,7 @@ export default function PersonalDashboard() {
                           <Cell key={`cell-${index}`} fill={RATING_COLORS[index % RATING_COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip 
+                      <Tooltip
                         contentStyle={{
                           fontSize: isMobile ? '12px' : '14px',
                         }}
@@ -426,7 +414,7 @@ export default function PersonalDashboard() {
                   <div className="grid grid-cols-5 gap-2">
                     {stats.ratingDistribution.map((bucket, index) => (
                       <div key={bucket.name} className="text-center">
-                        <div 
+                        <div
                           className="h-2 rounded-full mb-1"
                           style={{ backgroundColor: RATING_COLORS[index] }}
                         />
@@ -453,17 +441,17 @@ export default function PersonalDashboard() {
                 <ChartEmptyState description="과정별 데이터가 없습니다" />
               ) : (
                 <ResponsiveContainer width="100%" height={isMobile ? 300 : 350}>
-                  <BarChart 
-                    data={stats.courseBreakdown} 
-                    margin={{ 
+                  <BarChart
+                    data={stats.courseBreakdown}
+                    margin={{
                       bottom: isMobile ? 80 : 60,
                       left: isMobile ? -10 : 0,
                       right: isMobile ? 10 : 20,
                     }}
                   >
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis 
-                      dataKey="courseName" 
+                    <XAxis
+                      dataKey="courseName"
                       className="text-xs"
                       tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isMobile ? 9 : 11 }}
                       angle={-45}
@@ -471,7 +459,7 @@ export default function PersonalDashboard() {
                       height={isMobile ? 120 : 100}
                       interval={0}
                     />
-                    <YAxis 
+                    <YAxis
                       className="text-xs"
                       tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isMobile ? 10 : 12 }}
                       width={isMobile ? 40 : 60}
@@ -485,15 +473,15 @@ export default function PersonalDashboard() {
                       }}
                     />
                     {!isMobile && <Legend />}
-                    <Bar 
-                      dataKey="avgSatisfaction" 
-                      fill="hsl(var(--primary))" 
+                    <Bar
+                      dataKey="avgSatisfaction"
+                      fill="hsl(var(--primary))"
                       name="평균 만족도"
                       radius={[4, 4, 0, 0]}
                     />
-                    <Bar 
-                      dataKey="responses" 
-                      fill="hsl(var(--chart-2))" 
+                    <Bar
+                      dataKey="responses"
+                      fill="hsl(var(--chart-2))"
                       name="응답 수"
                       radius={[4, 4, 0, 0]}
                     />
@@ -569,6 +557,6 @@ export default function PersonalDashboard() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+    </div >
   );
 }
