@@ -498,7 +498,7 @@ export default function PersonalDashboard({ targetInstructorId }: PersonalDashbo
           <Card>
             <CardHeader>
               <CardTitle>과정별 통계</CardTitle>
-              <CardDescription>각 과정별 만족도 및 응답 현황</CardDescription>
+              <CardDescription>각 과정별 평균 만족도</CardDescription>
             </CardHeader>
             <CardContent>
               {stats.courseBreakdown.length === 0 ? (
@@ -527,6 +527,7 @@ export default function PersonalDashboard({ targetInstructorId }: PersonalDashbo
                       className="text-xs"
                       tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isMobile ? 10 : 12 }}
                       width={isMobile ? 40 : 60}
+                      domain={[0, 10]}
                     />
                     <Tooltip
                       contentStyle={{
@@ -541,12 +542,6 @@ export default function PersonalDashboard({ targetInstructorId }: PersonalDashbo
                       dataKey="avgSatisfaction"
                       fill="hsl(var(--primary))"
                       name="평균 만족도"
-                      radius={[4, 4, 0, 0]}
-                    />
-                    <Bar
-                      dataKey="responses"
-                      fill="hsl(var(--chart-2))"
-                      name="응답 수"
                       radius={[4, 4, 0, 0]}
                     />
                   </BarChart>
