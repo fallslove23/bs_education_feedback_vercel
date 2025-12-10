@@ -199,10 +199,14 @@ export const SurveysRepository = {
   },
 
   async getAvailableCourseNames(year: number | null): Promise<string[]> {
-    let q = supabase.from("surveys").select("course_name").not("course_name", "is", null);
+    // 뷰(surveys_list_v1)에서 과정명을 조회하여 실제 리스트와 필터를 일치시킴
+    // 이렇게 해야 Program View로 매핑된 이름만 필터에 노출됨 ("300 점검방법" 같은 옛날 이름 제거)
+    let q = supabase.from("surveys_list_v1").select("course_name");
     if (year) q = q.eq("education_year", year);
+
     const { data, error } = await q;
     if (error) throw error;
+
     const set = new Set<string>();
     (data || []).forEach((r: any) => r.course_name && set.add(r.course_name));
     return Array.from(set).sort((a, b) => a.localeCompare(b));
