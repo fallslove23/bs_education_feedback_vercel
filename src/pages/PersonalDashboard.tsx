@@ -425,15 +425,46 @@ export default function PersonalDashboard({ targetInstructorId }: PersonalDashbo
                       tickLine={false}
                     />
                     <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--background))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                        fontSize: isMobile ? '12px' : '14px',
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          const courses = data.courses || [];
+                          return (
+                            <div className="rounded-lg border bg-background/95 backdrop-blur-sm p-3 shadow-xl ring-1 ring-border max-w-[200px] sm:max-w-[280px]">
+                              <p className="mb-2 font-semibold text-sm text-foreground">{label}</p>
+                              <div className="mb-3 flex items-center gap-2">
+                                <span className="flex h-2 w-2 rounded-full bg-primary" />
+                                <span className="font-bold text-lg text-primary">
+                                  {Number(data.average).toFixed(1)}점
+                                </span>
+                                <span className="text-xs text-muted-foreground font-medium">
+                                  / {data.responses}명 응답
+                                </span>
+                              </div>
+
+                              {courses.length > 0 && (
+                                <div className="border-t border-border/50 pt-2 mt-1">
+                                  <p className="mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">진행 과정</p>
+                                  <ul className="text-xs space-y-1">
+                                    {courses.slice(0, 5).map((c: string, i: number) => (
+                                      <li key={i} className="flex items-start gap-1.5 text-foreground/80">
+                                        <span className="mt-1.5 h-0.5 w-0.5 rounded-full bg-foreground/40 shrink-0" />
+                                        <span className="leading-tight">{c}</span>
+                                      </li>
+                                    ))}
+                                    {courses.length > 5 && (
+                                      <li className="text-muted-foreground text-[11px] pl-2 pt-0.5">
+                                        외 {courses.length - 5}개 과정
+                                      </li>
+                                    )}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
+                        return null;
                       }}
-                      formatter={(value: number) => [`${value.toFixed(1)}점`, '만족도']}
-                      labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '0.25rem' }}
                     />
                     <Line
                       type="monotone"
