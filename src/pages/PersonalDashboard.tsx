@@ -398,12 +398,12 @@ export default function PersonalDashboard({ targetInstructorId }: PersonalDashbo
               ) : (
                 <ResponsiveContainer width="100%" height={isMobile ? 250 : 300}>
                   <LineChart data={stats.trend} margin={{
-                    top: 5,
-                    right: isMobile ? 5 : 10,
+                    top: 20,
+                    right: isMobile ? 10 : 30,
                     left: isMobile ? -20 : 0,
                     bottom: isMobile ? 5 : 5
                   }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted/40" />
                     <XAxis
                       dataKey="period"
                       className="text-xs"
@@ -411,28 +411,38 @@ export default function PersonalDashboard({ targetInstructorId }: PersonalDashbo
                       angle={isMobile ? -45 : 0}
                       textAnchor={isMobile ? 'end' : 'middle'}
                       height={isMobile ? 60 : 30}
+                      axisLine={false}
+                      tickLine={false}
+                      padding={{ left: 10, right: 10 }}
                     />
                     <YAxis
                       className="text-xs"
                       tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isMobile ? 10 : 12 }}
-                      width={isMobile ? 40 : 60}
+                      width={isMobile ? 30 : 40}
                       domain={[0, 10]}
+                      ticks={[0, 2, 4, 6, 8, 10]}
+                      axisLine={false}
+                      tickLine={false}
                     />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: 'hsl(var(--background))',
                         border: '1px solid hsl(var(--border))',
-                        borderRadius: '6px',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                         fontSize: isMobile ? '12px' : '14px',
                       }}
+                      formatter={(value: number) => [`${value.toFixed(1)}점`, '만족도']}
+                      labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '0.25rem' }}
                     />
                     <Line
                       type="monotone"
-                      dataKey="satisfaction"
+                      dataKey="average"
                       stroke="hsl(var(--primary))"
-                      strokeWidth={isMobile ? 2 : 2}
-                      name="만족도"
-                      dot={{ fill: 'hsl(var(--primary))', r: isMobile ? 3 : 4 }}
+                      strokeWidth={3}
+                      dot={{ fill: 'hsl(var(--background))', stroke: 'hsl(var(--primary))', strokeWidth: 2, r: 4 }}
+                      activeDot={{ r: 6, strokeWidth: 2 }}
+                      animationDuration={1500}
                     />
                   </LineChart>
                 </ResponsiveContainer>
