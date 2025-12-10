@@ -664,18 +664,18 @@ const CourseStatisticsManagement = () => {
 
         <CardContent className="space-y-4">
           {/* 필터 섹션 */}
-          <div className="flex items-center gap-4 p-4 bg-muted/20 rounded-lg">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 bg-muted/20 rounded-lg">
+            <div className="flex items-center gap-2 mb-2 sm:mb-0">
               <Filter className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">필터</span>
             </div>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-2 sm:flex w-full sm:w-auto gap-2">
               <Select value={selectedYear.toString()} onValueChange={(value) => {
                 setSelectedYear(Number(value));
                 setSelectedRound('all');
                 setSelectedCourse('all');
               }}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-full sm:w-32">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -689,7 +689,7 @@ const CourseStatisticsManagement = () => {
                 setSelectedRound(value);
                 setSelectedCourse('all');
               }}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-full sm:w-32">
                   <SelectValue placeholder="차수 선택" />
                 </SelectTrigger>
                 <SelectContent>
@@ -700,17 +700,19 @@ const CourseStatisticsManagement = () => {
                 </SelectContent>
               </Select>
 
-              <Select value={selectedCourse} onValueChange={setSelectedCourse}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="과정 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">전체 과정</SelectItem>
-                  {availableCourses.map(course => (
-                    <SelectItem key={course} value={course}>{course}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="col-span-2 sm:col-span-1">
+                <Select value={selectedCourse} onValueChange={setSelectedCourse}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="과정 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">전체 과정</SelectItem>
+                    {availableCourses.map(course => (
+                      <SelectItem key={course} value={course}>{course}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           {/* 테이블 섹션 */}
@@ -719,7 +721,7 @@ const CourseStatisticsManagement = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : (
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
               {statistics.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">
                   선택한 조건에 해당하는 통계 데이터가 없습니다.

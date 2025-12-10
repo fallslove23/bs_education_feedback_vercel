@@ -19,12 +19,14 @@ export function DashboardLayout({ children, title, description }: DashboardLayou
 
   return (
     <SidebarProvider>
-      <div className="h-screen flex w-full bg-background text-foreground overflow-hidden">
-        <AdminSidebar />
+      <div className="h-screen flex w-full bg-background text-foreground overflow-hidden print:h-auto print:overflow-visible print:block">
+        <div className="print:hidden">
+          <AdminSidebar />
+        </div>
 
-        <div className="flex-1 flex flex-col h-full overflow-hidden">
+        <div className="flex-1 flex flex-col h-full overflow-hidden print:h-auto print:overflow-visible print:block">
           {/* Header - 더 컴팩트하게 */}
-          <header className="h-12 border-b border-surface-border bg-surface/90 backdrop-blur-sm supports-[backdrop-filter]:bg-surface/80 shrink-0 z-50 shadow-sm ios-safe-area transition-colors relative">
+          <header className="h-12 border-b border-surface-border bg-surface/90 backdrop-blur-sm supports-[backdrop-filter]:bg-surface/80 shrink-0 z-50 shadow-sm ios-safe-area transition-colors relative print:hidden">
             <div className="flex items-center justify-between h-full px-2 sm:px-3 max-w-full overflow-hidden">
               {/* Left: Sidebar Toggle - z-index to stay clickable above absolute center */}
               <div className="flex items-center shrink-0 z-10">
@@ -108,7 +110,7 @@ export function DashboardLayout({ children, title, description }: DashboardLayou
           </header>
 
           {/* Main content - 컴팩트한 패딩 */}
-          <main className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 touch-scroll safe-bottom compact-content scroll-smooth">
+          <main className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 touch-scroll safe-bottom compact-content scroll-smooth print:overflow-visible print:h-auto">
             <div className="max-w-full min-h-full">
               {children}
             </div>

@@ -104,27 +104,27 @@ const SurveyDetailedAnalysis = () => {
   const { toast } = useToast();
   const { user, userRoles } = useAuth();
 
-  
-  
+
+
   // 사용자 권한 관련
   const [profile, setProfile] = useState<{ instructor_id: string | null } | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
-  
+
   const canViewAll = useMemo(
     () => (userRoles?.includes('admin') || userRoles?.includes('operator') || userRoles?.includes('director')) ?? false,
     [userRoles]
   );
-  
+
   const isAdmin = useMemo(
     () => userRoles?.includes('admin') ?? false,
     [userRoles]
   );
-  
+
   const isInstructor = useMemo(
     () => userRoles?.includes('instructor') ?? false,
     [userRoles]
   );
-  
+
   // 데이터 상태
   const [detailStats, setDetailStats] = useState<any>(null);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -219,7 +219,7 @@ const SurveyDetailedAnalysis = () => {
     try {
       // 강사 사용자의 경우 자신의 데이터만 필터링
       const restrictToInstructorId = !canViewAll && isInstructor ? profile?.instructor_id ?? null : null;
-      
+
       // 해당 설문의 세션들에서 고유한 강사 정보 추출 (운영 세션 제외)
       const { data: sessionsData, error: sessionsError } = await supabase
         .from('survey_sessions')
@@ -243,9 +243,9 @@ const SurveyDetailedAnalysis = () => {
       for (const session of sessionsData || []) {
         const instructorId = (session as any).instructor_id;
         const subjectTitle = (session as any).subjects?.title || (session as any).session_name || '';
-        const isOperation = subjectTitle.includes('운영') || 
-                           ((session as any).session_name && (session as any).session_name.includes('운영'));
-        
+        const isOperation = subjectTitle.includes('운영') ||
+          ((session as any).session_name && (session as any).session_name.includes('운영'));
+
         if (instructorId && !isOperation) {
           // 강사 사용자의 경우 자신의 데이터만 포함
           if (restrictToInstructorId && instructorId !== restrictToInstructorId) {
@@ -262,11 +262,11 @@ const SurveyDetailedAnalysis = () => {
           .in('id', Array.from(uniqueInstructors));
 
         instructorsData?.forEach((inst: any) => {
-          const session = (sessionsData as any)?.find((s: any) => 
+          const session = (sessionsData as any)?.find((s: any) =>
             s.instructor_id === inst.id
           );
           const sessionName = session?.subjects?.title || session?.session_name || '';
-          
+
           instructorMap.set(inst.id, {
             name: inst.name,
             course: sessionName
@@ -294,7 +294,7 @@ const SurveyDetailedAnalysis = () => {
     try {
       // 강사 사용자의 경우 자신의 데이터만 필터링
       const restrictToInstructorId = !canViewAll && isInstructor ? profile?.instructor_id ?? null : null;
-      
+
       // 세션 데이터와 과목 정보를 함께 조회
       const { data: sessData, error: sessError } = await supabase
         .from('survey_sessions')
@@ -304,15 +304,15 @@ const SurveyDetailedAnalysis = () => {
         .order('session_name', { ascending: true });
 
       if (sessError) throw sessError;
-      
+
       // 운영 만족도 세션과 강사 세션을 분리
       const operationSessions: any[] = [];
       const instructorSessions: any[] = [];
-      
+
       (sessData || []).forEach((s: any) => {
         const subjectTitle = s.subjects?.title || '';
         const isOperation = subjectTitle.includes('운영');
-        
+
         if (isOperation) {
           operationSessions.push(s);
         } else {
@@ -320,16 +320,16 @@ const SurveyDetailedAnalysis = () => {
           instructorSessions.push(s);
         }
       });
-      
+
       // 강사 사용자의 경우 자신의 데이터만 필터링
       let filteredInstructorSessions = instructorSessions;
       let filteredOperationSessions = operationSessions;
-      
+
       if (restrictToInstructorId) {
-        filteredInstructorSessions = instructorSessions.filter((s: any) => 
+        filteredInstructorSessions = instructorSessions.filter((s: any) =>
           s.instructor_id === restrictToInstructorId
         );
-        filteredOperationSessions = operationSessions.filter((s: any) => 
+        filteredOperationSessions = operationSessions.filter((s: any) =>
           s.instructor_id === restrictToInstructorId
         );
       }
@@ -338,7 +338,7 @@ const SurveyDetailedAnalysis = () => {
         ...filteredInstructorSessions.map((s: any) => s.instructor_id),
         ...filteredOperationSessions.map((s: any) => s.instructor_id)
       ].filter(id => id)));
-      
+
       let nameMap = new Map<string, string>();
       if (allInstructorIds.length) {
         const { data: instData } = await supabase
@@ -350,19 +350,19 @@ const SurveyDetailedAnalysis = () => {
 
       const options: SubjectOption[] = [];
       const byInstructor = new Map<string, string[]>();
-      
+
       // 강사-과목 조합으로 그룹화
-      const instructorSubjectMap = new Map<string, { 
-        sessions: string[], 
-        instructor_id: string, 
-        subject_title: string 
+      const instructorSubjectMap = new Map<string, {
+        sessions: string[],
+        instructor_id: string,
+        subject_title: string
       }>();
 
       filteredInstructorSessions.forEach((s: any) => {
         const key = `${s.instructor_id}_${s.subject_id}`;
         const existing = instructorSubjectMap.get(key);
         const subjectTitle = s.subjects?.title || s.session_name || '과목';
-        
+
         if (existing) {
           existing.sessions.push(s.id);
         } else {
@@ -384,7 +384,7 @@ const SurveyDetailedAnalysis = () => {
       instructorSubjectMap.forEach((group, key) => {
         const instr = nameMap.get(group.instructor_id) ?? '';
         const label = instr ? `${instr} - ${group.subject_title}` : group.subject_title;
-        
+
         options.push({
           key: `instructor_subject_${key}`,
           label,
@@ -412,9 +412,9 @@ const SurveyDetailedAnalysis = () => {
         const operatorName = instrId !== 'no_instructor' && nameMap.get(instrId)
           ? nameMap.get(instrId)
           : survey?.operator_name || '운영자';
-        
+
         const operationLabel = `${operatorName} - 운영 만족도`;
-        
+
         options.push({
           key: `operation_${instrId}`,
           label: operationLabel,
@@ -432,10 +432,10 @@ const SurveyDetailedAnalysis = () => {
 
   const loadDetailStats = useCallback(async () => {
     if (!surveyId) return;
-    
+
     setInitialLoading(true);
     setError(null);
-    
+
     try {
       // 먼저 설문에 질문이 있는지 확인
       const { count: questionCount, error: checkError } = await supabase
@@ -458,7 +458,7 @@ const SurveyDetailedAnalysis = () => {
         distributionLimit: 9999,
         textLimit: 9999,
       });
-      
+
       setDetailStats(stats);
     } catch (err) {
       console.error('Error loading detail stats:', err);
@@ -485,7 +485,7 @@ const SurveyDetailedAnalysis = () => {
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const instructorIdFromUrl = searchParams.get('instructorId');
-    
+
     if (instructorIdFromUrl && instructorOptions.length > 0) {
       const matchedOption = instructorOptions.find(opt => opt.instructorId === instructorIdFromUrl);
       if (matchedOption) {
@@ -507,7 +507,7 @@ const SurveyDetailedAnalysis = () => {
   useEffect(() => {
     if (!canViewAll && isInstructor && profile?.instructor_id && subjectOptions.length > 0) {
       // 자신과 관련된 과목이 있으면 첫 번째 것으로 자동 설정
-      const mySubjects = subjectOptions.filter(opt => 
+      const mySubjects = subjectOptions.filter(opt =>
         opt.label.includes(instructorOptions.find(iOpt => iOpt.instructorId === profile.instructor_id)?.label.split(' - ')[0] || '')
       );
       if (mySubjects.length > 0) {
@@ -701,7 +701,7 @@ const SurveyDetailedAnalysis = () => {
       return acc;
     }, {});
 
-    return Object.values(grouped).sort((a: any, b: any) => 
+    return Object.values(grouped).sort((a: any, b: any) =>
       (a.orderIndex || 0) - (b.orderIndex || 0)
     );
   }, [filteredTextAnswers]);
@@ -714,8 +714,8 @@ const SurveyDetailedAnalysis = () => {
         const chartData = SCORE_RANGE.map((score) => ({
           name: `${score}점`,
           value: question.ratingDistribution[score] || 0,
-          percentage: question.totalAnswers > 0 
-            ? Math.round(((question.ratingDistribution[score] || 0) / question.totalAnswers) * 100) 
+          percentage: question.totalAnswers > 0
+            ? Math.round(((question.ratingDistribution[score] || 0) / question.totalAnswers) * 100)
             : 0,
         }));
 
@@ -889,36 +889,41 @@ const SurveyDetailedAnalysis = () => {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="sm" onClick={handleNavigateBack}>
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
+        <div className="space-y-2 w-full sm:w-auto">
+          <div className="flex items-start gap-4">
+            <Button variant="outline" size="sm" onClick={handleNavigateBack} className="flex-shrink-0 mt-1 print:hidden">
               <ArrowLeft className="h-4 w-4 mr-2" />
               뒤로 가기
             </Button>
-            <h1 className="text-2xl font-bold">{survey.title}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold break-words break-keep leading-tight">{survey.title}</h1>
           </div>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span>{survey.education_year}년 {survey.education_round}차</span>
-            <span>{survey.course_name}</span>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground pl-1">
+            <div className="flex items-center gap-2">
+              <span>{survey.education_year}년 {survey.education_round}차</span>
+              <span className="hidden sm:inline text-muted-foreground/50">|</span>
+              <span>{survey.course_name}</span>
+            </div>
             <Badge variant={survey.status === 'completed' ? 'secondary' : 'outline'}>
               {survey.status === 'completed' ? '완료' : '진행 중'}
             </Badge>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleDownload}>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end print:hidden">
+          <Button variant="outline" onClick={handleDownload} className="flex-1 sm:flex-none">
             <Download className="h-4 w-4 mr-2" />
-            CSV 다운로드
+            <span className="hidden sm:inline">CSV 다운로드</span>
+            <span className="sm:hidden">다운로드</span>
           </Button>
-          <Button onClick={handleSendResults}>
+          <Button onClick={handleSendResults} className="flex-1 sm:flex-none">
             <Mail className="h-4 w-4 mr-2" />
-            결과 전송
+            <span className="hidden sm:inline">결과 전송</span>
+            <span className="sm:hidden">전송</span>
           </Button>
-          <Button variant="outline" onClick={() => window.print()}>
-            <Printer className="h-4 w-4 mr-2" />
-            인쇄
+          <Button variant="outline" onClick={() => window.print()} className="flex-none">
+            <Printer className="h-4 w-4" />
+            <span className="sr-only sm:not-sr-only sm:ml-2">인쇄</span>
           </Button>
         </div>
       </div>
@@ -936,49 +941,49 @@ const SurveyDetailedAnalysis = () => {
               )}
             </CardTitle>
           </CardHeader>
-           <CardContent>
-             <div className="grid gap-4 md:grid-cols-2">
-               <div className="space-y-2">
-                 <label className="text-sm font-medium">강사 선택</label>
-                 <Select 
-                   value={activeInstructor} 
-                   onValueChange={setActiveInstructor}
-                 >
-                   <SelectTrigger className="w-full">
-                     <SelectValue placeholder="강사 선택" />
-                   </SelectTrigger>
-                   <SelectContent className="bg-background border shadow-lg z-50">
-                     <SelectItem value="all">전체 강사</SelectItem>
-                     {instructorOptions.map((option) => (
-                       <SelectItem key={option.key} value={option.key}>
-                         {option.label}
-                       </SelectItem>
-                     ))}
-                   </SelectContent>
-                 </Select>
-               </div>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">강사 선택</label>
+                <Select
+                  value={activeInstructor}
+                  onValueChange={setActiveInstructor}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="강사 선택" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border shadow-lg z-50">
+                    <SelectItem value="all">전체 강사</SelectItem>
+                    {instructorOptions.map((option) => (
+                      <SelectItem key={option.key} value={option.key}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-               <div className="space-y-2">
-                 <label className="text-sm font-medium">과목/운영 선택</label>
-                 <Select 
-                   value={activeSubjectKey} 
-                   onValueChange={setActiveSubjectKey}
-                 >
-                   <SelectTrigger className="w-full">
-                     <SelectValue placeholder="과목/운영 선택" />
-                   </SelectTrigger>
-                   <SelectContent className="bg-background border shadow-lg z-50">
-                     <SelectItem value="all">전체</SelectItem>
-                     {displayedSubjectOptions.map((option) => (
-                       <SelectItem key={option.key} value={option.key}>
-                         {option.label}
-                       </SelectItem>
-                     ))}
-                   </SelectContent>
-                 </Select>
-               </div>
-             </div>
-           </CardContent>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">과목/운영 선택</label>
+                <Select
+                  value={activeSubjectKey}
+                  onValueChange={setActiveSubjectKey}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="과목/운영 선택" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border shadow-lg z-50">
+                    <SelectItem value="all">전체</SelectItem>
+                    {displayedSubjectOptions.map((option) => (
+                      <SelectItem key={option.key} value={option.key}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
         </Card>
       )}
 
@@ -1099,12 +1104,12 @@ const SurveyDetailedAnalysis = () => {
             <Card>
               <CardHeader>
                 <CardTitle>텍스트 피드백</CardTitle>
-                 <p className="text-sm text-muted-foreground">
-                   {(() => {
-                     const feedbackCount = textFeedbacks.reduce((total: number, group: any) => total + (group.answers?.length || 0), 0);
-                     return `${feedbackCount}개의 피드백이 있습니다.`;
-                   })()}
-                 </p>
+                <p className="text-sm text-muted-foreground">
+                  {(() => {
+                    const feedbackCount = textFeedbacks.reduce((total: number, group: any) => total + (group.answers?.length || 0), 0);
+                    return `${feedbackCount}개의 피드백이 있습니다.`;
+                  })()}
+                </p>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6 max-h-[600px] overflow-y-auto">
@@ -1118,41 +1123,41 @@ const SurveyDetailedAnalysis = () => {
                           </Badge>
                         )}
                       </h4>
-                       <div className="space-y-2">
-                         {group.answers.map((answer: any, index: number) => (
-                           <div key={answer.answerId} className="p-3 bg-muted/50 rounded-lg relative group">
-                             <p className="text-sm pr-8">{answer.answerText}</p>
-                             <div className="text-xs text-muted-foreground mt-1">
-                               {formatDateTime(answer.createdAt)}
-                             </div>
-                             {isAdmin && (
-                               <>
-                                 <Button
-                                   variant="ghost"
-                                   size="sm"
-                                   className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
-                                   onClick={() => setDeletingAnswerId(answer.answerId)}
-                                 >
-                                   <Trash2 className="h-3 w-3" />
-                                 </Button>
-                                 <ConfirmDialog
-                                   open={deletingAnswerId === answer.answerId}
-                                   onOpenChange={(open) => !open && setDeletingAnswerId(null)}
-                                   title="답변 삭제"
-                                   description="이 답변을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
-                                   primaryAction={{
-                                     label: '삭제',
-                                     variant: 'destructive',
-                                     onClick: () => {
-                                       handleDeleteAnswer(answer.answerId);
-                                       setDeletingAnswerId(null);
-                                     }
-                                   }}
-                                 />
-                               </>
-                             )}
-                           </div>
-                         ))}
+                      <div className="space-y-2">
+                        {group.answers.map((answer: any, index: number) => (
+                          <div key={answer.answerId} className="p-3 bg-muted/50 rounded-lg relative group">
+                            <p className="text-sm pr-8">{answer.answerText}</p>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {formatDateTime(answer.createdAt)}
+                            </div>
+                            {isAdmin && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
+                                  onClick={() => setDeletingAnswerId(answer.answerId)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                                <ConfirmDialog
+                                  open={deletingAnswerId === answer.answerId}
+                                  onOpenChange={(open) => !open && setDeletingAnswerId(null)}
+                                  title="답변 삭제"
+                                  description="이 답변을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+                                  primaryAction={{
+                                    label: '삭제',
+                                    variant: 'destructive',
+                                    onClick: () => {
+                                      handleDeleteAnswer(answer.answerId);
+                                      setDeletingAnswerId(null);
+                                    }
+                                  }}
+                                />
+                              </>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ))}
@@ -1179,52 +1184,52 @@ const SurveyDetailedAnalysis = () => {
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <CardContent>
-                   <div className="space-y-2 max-h-96 overflow-y-auto">
-                     {filteredResponses.slice(0, 50).map((response: any) => (
-                       <div key={response.id} className="flex items-center justify-between p-2 bg-muted/30 rounded relative group">
-                         <div className="flex-1">
-                           <div className="text-sm font-medium">
-                             {response.respondentEmail || '익명 응답자'}
-                           </div>
-                           <div className="text-xs text-muted-foreground">
-                             {formatDateTime(response.submittedAt)}
-                           </div>
-                         </div>
-                         <div className="flex items-center gap-2">
-                           {response.isTest && (
-                             <Badge variant="outline" className="text-xs">
-                               테스트
-                             </Badge>
-                           )}
-                           {isAdmin && (
-                             <>
-                               <Button
-                                 variant="ghost"
-                                 size="sm"
-                                 className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
-                                 onClick={() => setDeletingResponseId(response.id)}
-                               >
-                                 <Trash2 className="h-3 w-3" />
-                               </Button>
-                               <ConfirmDialog
-                                 open={deletingResponseId === response.id}
-                                 onOpenChange={(open) => !open && setDeletingResponseId(null)}
-                                 title="응답 삭제"
-                                 description={`${response.respondentEmail || '익명 응답자'}의 응답을 삭제하시겠습니까? 이 작업은 되돌릴 수 없으며, 해당 응답의 모든 답변이 함께 삭제됩니다.`}
-                                 primaryAction={{
-                                   label: '삭제',
-                                   variant: 'destructive',
-                                   onClick: () => {
-                                     handleDeleteResponse(response.id);
-                                     setDeletingResponseId(null);
-                                   }
-                                 }}
-                               />
-                             </>
-                           )}
-                         </div>
-                       </div>
-                     ))}
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {filteredResponses.slice(0, 50).map((response: any) => (
+                      <div key={response.id} className="flex items-center justify-between p-2 bg-muted/30 rounded relative group">
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">
+                            {response.respondentEmail || '익명 응답자'}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {formatDateTime(response.submittedAt)}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {response.isTest && (
+                            <Badge variant="outline" className="text-xs">
+                              테스트
+                            </Badge>
+                          )}
+                          {isAdmin && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
+                                onClick={() => setDeletingResponseId(response.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                              <ConfirmDialog
+                                open={deletingResponseId === response.id}
+                                onOpenChange={(open) => !open && setDeletingResponseId(null)}
+                                title="응답 삭제"
+                                description={`${response.respondentEmail || '익명 응답자'}의 응답을 삭제하시겠습니까? 이 작업은 되돌릴 수 없으며, 해당 응답의 모든 답변이 함께 삭제됩니다.`}
+                                primaryAction={{
+                                  label: '삭제',
+                                  variant: 'destructive',
+                                  onClick: () => {
+                                    handleDeleteResponse(response.id);
+                                    setDeletingResponseId(null);
+                                  }
+                                }}
+                              />
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </CollapsibleContent>

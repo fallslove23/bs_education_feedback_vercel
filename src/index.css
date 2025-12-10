@@ -484,3 +484,45 @@ All colors MUST be HSL.
 .role-switcher-fade {
   animation: fade-in 0.3s ease-out;
 }
+@media print {
+  @page {
+    margin: 1cm;
+    size: auto;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Force background colors to print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Remove shadows and effects for print */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    transition: none !important;
+  }
+
+  /* Hide scrollbars */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Layout resets to ensure full width */
+  html, body, #root, main {
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  /* Prevent page breaks inside cards/containers */
+  .break-inside-avoid {
+    break-inside: avoid;
+  }
+}

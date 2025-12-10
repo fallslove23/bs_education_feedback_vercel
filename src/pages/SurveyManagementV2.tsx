@@ -1532,44 +1532,52 @@ export default function SurveyManagementV2() {
             ) : (
               <div className="space-y-4">
                 {surveys.map((survey) => (
-                  <div key={survey.id} className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => toggleOne(survey.id)}
-                      className="h-8 w-8 p-0 flex-shrink-0"
-                    >
-                      <CheckSquare className={`h-4 w-4 ${selected.has(survey.id) ? 'text-primary' : 'text-muted-foreground'}`} />
-                    </Button>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-medium">
-                          <Highlight text={survey.title} query={q} />
-                        </h3>
-                        <Badge variant={getStatusInfo(survey).variant}>
-                          {getStatusInfo(survey).label}
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-muted-foreground space-y-1">
-                        <div>
-                          과정: <Highlight text={survey.course_name} query={q} /> - {survey.education_year}년 {survey.education_round}차 {survey.education_day}일차
+                  <div key={survey.id} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                    <div className="flex items-start gap-3 flex-1 w-full">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleOne(survey.id)}
+                        className="h-8 w-8 p-0 flex-shrink-0 mt-0.5 sm:mt-0"
+                      >
+                        <CheckSquare className={`h-4 w-4 ${selected.has(survey.id) ? 'text-primary' : 'text-muted-foreground'}`} />
+                      </Button>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <h3 className="font-medium break-keep leading-snug">
+                            <Highlight text={survey.title} query={q} />
+                          </h3>
+                          <Badge variant={getStatusInfo(survey).variant} className="flex-shrink-0">
+                            {getStatusInfo(survey).label}
+                          </Badge>
                         </div>
-                        {survey.instructor_name && (
-                          <div>
-                            강사: <Highlight text={survey.instructor_name} query={q} />
+                        <div className="text-sm text-muted-foreground space-y-1">
+                          <div className="break-words">
+                            과정: <Highlight text={survey.course_name} query={q} />
+                            <span className="inline-block ml-1">
+                              - {survey.education_year}년 {survey.education_round}차 {survey.education_day}일차
+                            </span>
                           </div>
-                        )}
-                        <div>생성일: {formatSafeDate(survey.created_at)}</div>
+                          {survey.instructor_name && (
+                            <div>
+                              강사: <Highlight text={survey.instructor_name} query={q} />
+                            </div>
+                          )}
+                          <div className="text-xs opacity-80">생성일: {formatSafeDate(survey.created_at)}</div>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    <div className="flex items-center justify-end gap-2 w-full sm:w-auto pl-11 sm:pl-0">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => navigate(`/survey-preview/${survey.id}`)}
+                        className="h-8 w-8 sm:w-auto sm:px-3 p-0"
+                        title="미리보기"
                       >
-                        <Eye className="h-4 w-4 mr-1" />
-                        미리보기
+                        <Eye className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline">미리보기</span>
                       </Button>
                       <Button
                         variant="outline"
@@ -1577,13 +1585,15 @@ export default function SurveyManagementV2() {
                         onClick={() => navigate(`/survey-detailed-analysis/${survey.id}`, {
                           state: { from: 'survey-management' }
                         })}
+                        className="h-8 w-8 sm:w-auto sm:px-3 p-0"
+                        title="분석"
                       >
-                        <BarChart className="h-4 w-4 mr-1" />
-                        분석
+                        <BarChart className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline">분석</span>
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" className="h-8 w-8 p-0">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
