@@ -17,13 +17,13 @@ import {
   Activity,
   AlertCircle,
 } from "lucide-react";
-import { 
-  AreaChart as RechartsAreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  ResponsiveContainer, 
+import {
+  AreaChart as RechartsAreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
   Tooltip,
   PieChart,
   Pie,
@@ -97,10 +97,12 @@ const aggregateTrendData = (
   });
 };
 
+import { useNavigate } from "react-router-dom";
 /** ---------- Page ---------- */
 const DashboardOverview: React.FC = () => {
   const { userRoles, loading: authLoading } = useAuth();
   const isAdmin = !!userRoles?.includes("admin"); // ✅ 반드시 함수 내부에서 선언
+  const navigate = useNavigate();
 
   const [stats, setStats] = useState<Stats>({
     totalSurveys: 0,
@@ -182,7 +184,7 @@ const DashboardOverview: React.FC = () => {
           .from('question_answers')
           .select('answer_value, survey_questions!inner(question_type)')
           .in('survey_questions.question_type', ['rating', 'scale']);
-        
+
         if (answers && answers.length > 0) {
           const numericAnswers: number[] = [];
           answers.forEach((answer: any) => {
@@ -198,7 +200,7 @@ const DashboardOverview: React.FC = () => {
               numericAnswers.push(n);
             }
           });
-          
+
           if (numericAnswers.length > 0) {
             avgScore = Number((numericAnswers.reduce((sum, val) => sum + val, 0) / numericAnswers.length).toFixed(1));
           }
@@ -265,8 +267,11 @@ const DashboardOverview: React.FC = () => {
 
         {/* 주요 통계 카드 */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <Card className="relative overflow-hidden bg-card border-0 shadow-sm hover:shadow-lg transition-all duration-300">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent dark:from-purple-500/10" />
+          <Card
+            className="relative overflow-hidden bg-card border-0 shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer group"
+            onClick={() => navigate('/surveys-v2')}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent dark:from-purple-500/10 group-hover:from-purple-500/10 transition-colors" />
             <CardHeader className="relative pb-2 p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div className="p-1.5 sm:p-2 rounded-lg bg-purple-100 dark:bg-purple-500/20">
@@ -289,8 +294,11 @@ const DashboardOverview: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="relative overflow-hidden bg-card border-0 shadow-sm hover:shadow-lg transition-all duration-300">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent dark:from-blue-500/10" />
+          <Card
+            className="relative overflow-hidden bg-card border-0 shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer group"
+            onClick={() => navigate('/surveys-v2?status=active')}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent dark:from-blue-500/10 group-hover:from-blue-500/10 transition-colors" />
             <CardHeader className="relative pb-2 p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div className="p-1.5 sm:p-2 rounded-lg bg-blue-100 dark:bg-blue-500/20">
@@ -311,8 +319,11 @@ const DashboardOverview: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="relative overflow-hidden bg-card border-0 shadow-sm hover:shadow-lg transition-all duration-300">
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent dark:from-green-500/10" />
+          <Card
+            className="relative overflow-hidden bg-card border-0 shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer group"
+            onClick={() => navigate('/dashboard/course-statistics')}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent dark:from-green-500/10 group-hover:from-green-500/10 transition-colors" />
             <CardHeader className="relative pb-2 p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div className="p-1.5 sm:p-2 rounded-lg bg-green-100 dark:bg-green-500/20">
@@ -336,8 +347,11 @@ const DashboardOverview: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="relative overflow-hidden bg-card border-0 shadow-sm hover:shadow-lg transition-all duration-300">
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent dark:from-orange-500/10" />
+          <Card
+            className="relative overflow-hidden bg-card border-0 shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer group"
+            onClick={() => navigate('/dashboard/results')}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent dark:from-orange-500/10 group-hover:from-orange-500/10 transition-colors" />
             <CardHeader className="relative pb-2 p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div className="p-1.5 sm:p-2 rounded-lg bg-orange-100 dark:bg-orange-500/20">
@@ -362,8 +376,11 @@ const DashboardOverview: React.FC = () => {
         {/* 관리자 전용 통계 */}
         {isAdmin && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            <Card className="relative overflow-hidden bg-card border-0 shadow-sm hover:shadow-lg transition-all duration-300">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent dark:from-indigo-500/10" />
+            <Card
+              className="relative overflow-hidden bg-card border-0 shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer group"
+              onClick={() => navigate('/dashboard/instructors')}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent dark:from-indigo-500/10 group-hover:from-indigo-500/10 transition-colors" />
               <CardHeader className="relative pb-2 p-3 sm:p-4">
                 <div className="flex items-center justify-between">
                   <div className="p-1.5 sm:p-2 rounded-lg bg-indigo-100 dark:bg-indigo-500/20">
@@ -384,8 +401,11 @@ const DashboardOverview: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card className="relative overflow-hidden bg-card border-0 shadow-sm hover:shadow-lg transition-all duration-300">
-              <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-transparent dark:from-pink-500/10" />
+            <Card
+              className="relative overflow-hidden bg-card border-0 shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer group"
+              onClick={() => navigate('/dashboard/courses')}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-transparent dark:from-pink-500/10 group-hover:from-pink-500/10 transition-colors" />
               <CardHeader className="relative pb-2 p-3 sm:p-4">
                 <div className="flex items-center justify-between">
                   <div className="p-1.5 sm:p-2 rounded-lg bg-pink-100 dark:bg-pink-500/20">
@@ -406,8 +426,11 @@ const DashboardOverview: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card className="relative overflow-hidden bg-card border-0 shadow-sm hover:shadow-lg transition-all duration-300">
-              <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-transparent dark:from-teal-500/10" />
+            <Card
+              className="relative overflow-hidden bg-card border-0 shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer group"
+              onClick={() => navigate('/surveys-v2?status=completed')}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-transparent dark:from-teal-500/10 group-hover:from-teal-500/10 transition-colors" />
               <CardHeader className="relative pb-2 p-3 sm:p-4">
                 <div className="flex items-center justify-between">
                   <div className="p-1.5 sm:p-2 rounded-lg bg-teal-100 dark:bg-teal-500/20">
@@ -683,8 +706,8 @@ const DashboardOverview: React.FC = () => {
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">만족도 평균</span>
                         <span className="font-semibold text-foreground">
-                          {stats.avgScore !== null && stats.avgScore !== undefined 
-                            ? `${stats.avgScore.toFixed(1)}/10.0` 
+                          {stats.avgScore !== null && stats.avgScore !== undefined
+                            ? `${stats.avgScore.toFixed(1)}/10.0`
                             : '-'}
                         </span>
                       </div>

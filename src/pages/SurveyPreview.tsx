@@ -108,7 +108,7 @@ const SurveyPreview = () => {
   const fetchSurveyData = async () => {
     try {
       console.log('Fetching survey preview data for:', surveyId);
-      
+
       // 설문 정보 가져오기 (상태나 날짜 제한 없이)
       const { data: surveyData, error: surveyError } = await supabase
         .from('surveys')
@@ -143,7 +143,7 @@ const SurveyPreview = () => {
 
       // 강사 정보 가져오기 - 세션별 강사 정보 구조 고려
       console.log('강사 정보 조회 시작 - 설문 ID:', surveyId);
-      
+
       // 현재 설문에 있는 모든 세션과 해당 강사 정보를 가져옴
       const { data: allSessionInstructors, error: sessionError } = await supabase
         .from('survey_sessions')
@@ -162,7 +162,7 @@ const SurveyPreview = () => {
         .eq('survey_id', surveyId);
 
       console.log('세션별 강사 정보:', allSessionInstructors, 'Error:', sessionError);
-      
+
       // 세션별 강사 정보를 저장하여 나중에 질문별로 매칭
       const newSessionInstructorMap = new Map();
       if (!sessionError && allSessionInstructors) {
@@ -173,10 +173,10 @@ const SurveyPreview = () => {
         });
       }
       setSessionInstructorMap(newSessionInstructorMap);
-      
+
       // 기본 강사 정보 설정 (첫 번째 세션의 강사 또는 survey_instructors에서)
       let defaultInstructorData = null;
-      
+
       // survey_instructors 테이블에서 강사 정보 조회 (백업)
       const { data: surveyInstructors, error: siError } = await supabase
         .from('survey_instructors')
@@ -195,12 +195,12 @@ const SurveyPreview = () => {
         const instructors = surveyInstructors
           .map(si => si.instructors)
           .filter(Boolean) as Instructor[];
-        
+
         if (instructors.length > 0) {
           defaultInstructorData = instructors[0];
         }
       }
-      
+
       // 세션에서 첫 번째 강사 가져오기 (우선순위)
       if (allSessionInstructors && allSessionInstructors.length > 0) {
         const firstSessionWithInstructor = allSessionInstructors.find(s => s.instructors);
@@ -238,7 +238,7 @@ const SurveyPreview = () => {
         .order('order_index');
 
       if (sectionsError) throw sectionsError;
-      
+
       // 세션 정보 가져오기
       const { data: sessionsData } = await supabase
         .from('survey_sessions')
@@ -268,7 +268,7 @@ const SurveyPreview = () => {
         description: section.description,
         order_index: section.order_index,
       }));
-      
+
       setSections(transformedSections);
 
       // 질문 가져오기
@@ -279,12 +279,12 @@ const SurveyPreview = () => {
         .order('order_index');
 
       if (questionsError) throw questionsError;
-      
+
       console.log('Preview Questions Data:', questionsData);
       console.log('Questions Length:', questionsData?.length || 0);
-      
+
       setQuestions(questionsData || []);
-      
+
       // currentStep 초기화 (질문이 있을 때만)
       if (questionsData && questionsData.length > 0) {
         setCurrentStep(0);
@@ -295,7 +295,7 @@ const SurveyPreview = () => {
         questionId: q.id,
         answer: q.question_type === 'multiple_choice_multiple' ? [] : ''
       }));
-      
+
       console.log('Preview Initial Answers:', initialAnswers);
       setAnswers(initialAnswers);
 
@@ -313,20 +313,20 @@ const SurveyPreview = () => {
   };
 
   const handleAnswerChange = (questionId: string, value: string | string[]) => {
-    setAnswers(prev => prev.map(answer => 
+    setAnswers(prev => prev.map(answer =>
       answer.questionId === questionId ? { ...answer, answer: value } : answer
     ));
   };
 
   const validateCurrentStep = () => {
     const currentQuestions = getCurrentStepQuestions();
-    
+
     for (const question of currentQuestions) {
       if (question.is_required) {
         const answer = answers.find(a => a.questionId === question.id);
-        if (!answer || !answer.answer || 
-           (Array.isArray(answer.answer) && answer.answer.length === 0) ||
-           (typeof answer.answer === 'string' && answer.answer.trim() === '')) {
+        if (!answer || !answer.answer ||
+          (Array.isArray(answer.answer) && answer.answer.length === 0) ||
+          (typeof answer.answer === 'string' && answer.answer.trim() === '')) {
           return false;
         }
       }
@@ -433,7 +433,7 @@ const SurveyPreview = () => {
       });
       return;
     }
-    
+
     setCurrentStep(prev => prev + 1);
   };
 
@@ -453,7 +453,7 @@ const SurveyPreview = () => {
 
   const renderQuestion = (question: Question) => {
     const answer = answers.find(a => a.questionId === question.id);
-    
+
     switch (question.question_type) {
       case 'text':
         return (
@@ -464,7 +464,7 @@ const SurveyPreview = () => {
             className="touch-friendly"
           />
         );
-        
+
       case 'textarea':
         return (
           <Textarea
@@ -475,7 +475,7 @@ const SurveyPreview = () => {
             className="touch-friendly"
           />
         );
-        
+
       case 'multiple_choice':
         return (
           <RadioGroup
@@ -490,7 +490,7 @@ const SurveyPreview = () => {
             ))}
           </RadioGroup>
         );
-        
+
       case 'multiple_choice_multiple':
         return (
           <div className="space-y-2">
@@ -517,11 +517,11 @@ const SurveyPreview = () => {
             })}
           </div>
         );
-        
+
       case 'rating':
         const rating = parseInt(answer?.answer as string) || 0;
         return (
-          <div className="grid grid-cols-5 gap-2 sm:flex sm:space-x-2">
+          <div className="grid grid-cols-5 gap-2 sm:flex sm:flex-wrap sm:gap-2">
             {[1, 2, 3, 4, 5].map(value => (
               <Button
                 key={value}
@@ -536,35 +536,26 @@ const SurveyPreview = () => {
             ))}
           </div>
         );
-        
+
       case 'scale':
-        const min = question.options?.min || 1;
-        const max = question.options?.max || 10;
-        
+        const scale = parseInt(answer?.answer as string) || 0;
         return (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
-              <span className="break-words">전혀 그렇지 않다</span>
-              <span className="break-words">매우 그렇다</span>
-            </div>
-            <RadioGroup
-              value={answer?.answer as string || ''}
-              onValueChange={(value) => handleAnswerChange(question.id, value)}
-              className="grid grid-cols-5 sm:flex sm:items-center sm:justify-between gap-2"
-            >
-              {Array.from({ length: max - min + 1 }, (_, i) => {
-                const value = min + i;
-                return (
-                  <div key={value} className="flex flex-col items-center space-y-1 touch-friendly">
-                    <span className="text-xs sm:text-sm font-medium">{value}</span>
-                    <RadioGroupItem value={String(value)} id={`${question.id}-${value}`} className="touch-friendly" />
-                  </div>
-                );
-              })}
-            </RadioGroup>
+          <div className="grid grid-cols-5 gap-1 sm:grid-cols-10 sm:gap-2">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((v) => (
+              <Button
+                key={v}
+                type="button"
+                variant={scale === v ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleAnswerChange(question.id, v.toString())}
+                className="touch-friendly text-xs h-8 sm:text-sm sm:h-10"
+              >
+                {v}
+              </Button>
+            ))}
           </div>
         );
-        
+
       default:
         return (
           <Input
@@ -593,13 +584,13 @@ const SurveyPreview = () => {
   }
 
   const totalSteps = getTotalSteps();
-  
+
   console.log('Preview Render - currentStep:', currentStep, 'totalSteps:', totalSteps, 'questions:', questions);
-  
+
   // 진행률 계산: 실제 답변 완성도 기반
   const calculateProgress = () => {
     if (questions.length === 0) return 0;
-    
+
     let answeredCount = 0;
     questions.forEach(question => {
       const answer = answers.find(a => a.questionId === question.id);
@@ -611,10 +602,10 @@ const SurveyPreview = () => {
         }
       }
     });
-    
+
     return (answeredCount / questions.length) * 100;
   };
-  
+
   const progress = calculateProgress();
 
   const isLastStep = currentStep === totalSteps - 1;
@@ -757,7 +748,7 @@ const SurveyPreview = () => {
             <Alert className="bg-blue-50 border-blue-200">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                이것은 설문 미리보기 모드입니다. 응답 데이터는 실제로 저장되지 않습니다.
+                이것은 설문 미리보기 모드입니다. 응답 데이터는 실제로 저장되지 않습니다. (업데이트됨)
               </AlertDescription>
             </Alert>
 
@@ -805,7 +796,7 @@ const SurveyPreview = () => {
                         {q.question_text}
                         {q.is_required && <span className="text-destructive ml-1">*</span>}
                       </Label>
-                      <div className="max-w-full overflow-x-auto">{renderQuestion(q)}</div>
+                      <div className="max-w-full">{renderQuestion(q)}</div>
                     </div>
                   ))
                 )}

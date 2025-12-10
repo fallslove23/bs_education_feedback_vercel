@@ -1206,7 +1206,7 @@ const SurveyParticipate = () => {
       case 'rating': {
         const rating = parseInt((answer?.answer as string) || '0', 10);
         return (
-          <div className="grid grid-cols-5 gap-2 sm:flex sm:space-x-2">
+          <div className="grid grid-cols-5 gap-2 sm:flex sm:flex-wrap sm:gap-2">
             {[1, 2, 3, 4, 5].map((v) => (
               <Button
                 key={v}
@@ -1234,7 +1234,7 @@ const SurveyParticipate = () => {
             <RadioGroup
               value={(answer?.answer as string) || ''}
               onValueChange={(v) => handleAnswerChange(question.id, v)}
-              className="grid grid-cols-5 sm:flex sm:items-center sm:justify-between gap-2"
+              className="grid grid-cols-5 sm:flex sm:flex-wrap sm:items-center sm:justify-between gap-2"
             >
               {Array.from({ length: max - min + 1 }, (_, i) => min + i).map((v) => (
                 <div key={v} className="flex flex-col items-center space-y-1 touch-friendly">
@@ -1363,6 +1363,7 @@ const SurveyParticipate = () => {
             <p className="text-xs sm:text-sm text-muted-foreground break-words line-clamp-1">{getStepTitle()}</p>
           </div>
         </div>
+        <Progress value={progress} className="h-1 w-full rounded-none bg-primary/10" indicatorClassName="bg-primary/80 transition-all duration-500 ease-out" />
       </header>
 
       <main className="container mx-auto px-3 sm:px-4 py-6">
@@ -1538,7 +1539,7 @@ const SurveyParticipate = () => {
                         {q.question_text}
                         {q.is_required && <span className="text-destructive ml-1">*</span>}
                       </Label>
-                      <div className="max-w-full overflow-x-auto">{renderQuestion(q)}</div>
+                      <div className="max-w-full">{renderQuestion(q)}</div>
                     </div>
                   ))
                 )}
