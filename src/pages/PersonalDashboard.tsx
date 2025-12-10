@@ -192,7 +192,7 @@ export default function PersonalDashboard({ targetInstructorId }: PersonalDashbo
   const radarData = useMemo(() => {
     if (!stats.courseBreakdown || stats.courseBreakdown.length === 0) return [];
 
-    const calculateWeightedAvg = (key: 'avgInstructor' | 'avgCourse' | 'avgOperation') => {
+    const calculateWeightedAvg = (key: 'avgInstructor' | 'avgCourse' | 'avgOperation' | 'avgSatisfaction') => {
       let totalVal = 0;
       let totalRes = 0;
       stats.courseBreakdown.forEach(item => {
@@ -208,7 +208,7 @@ export default function PersonalDashboard({ targetInstructorId }: PersonalDashbo
     const data = [
       { subject: '강사 역량', value: calculateWeightedAvg('avgInstructor'), fullMark: 10 },
       { subject: '교육 내용', value: calculateWeightedAvg('avgCourse'), fullMark: 10 },
-      { subject: '운영 환경', value: calculateWeightedAvg('avgOperation'), fullMark: 10 },
+      { subject: '종합 만족도', value: calculateWeightedAvg('avgSatisfaction'), fullMark: 10 },
     ];
 
     return data.filter(item => item.value > 0);
