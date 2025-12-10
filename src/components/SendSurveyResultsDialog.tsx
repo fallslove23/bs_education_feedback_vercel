@@ -49,19 +49,19 @@ export const SendSurveyResultsDialog = ({
   const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  
+
   // Step 1: 수신자 선택
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [additionalEmails, setAdditionalEmails] = useState<string[]>([]);
   const [newEmail, setNewEmail] = useState('');
-  
+
   // Step 2: 이메일 미리보기
   const [emailPreview, setEmailPreview] = useState<EmailPreview | null>(null);
   const [previewMode, setPreviewMode] = useState<'html' | 'text'>('html');
-  
+
   // Step 3: 전송 결과
   const [sendResult, setSendResult] = useState<any>(null);
-  
+
   // 발송 이력 및 강제 재전송
   const [previousLogs, setPreviousLogs] = useState<any[]>([]);
   const [forceResend, setForceResend] = useState(false);
@@ -70,7 +70,7 @@ export const SendSurveyResultsDialog = ({
   // 설문에 연결된 강사 목록 및 선택 (다중 강사 설문 대응)
   const [availableInstructors, setAvailableInstructors] = useState<{ id: string; name: string; email: string | null }[]>([]);
   const [selectedInstructorId, setSelectedInstructorId] = useState<string>('all');
-  
+
   // 역할별 실제 사용자 수
   const [roleUserCounts, setRoleUserCounts] = useState<Record<string, number>>({});
 
@@ -87,7 +87,7 @@ export const SendSurveyResultsDialog = ({
       setPreviousLogs([]);
       setForceResend(false);
       setSelectedInstructorId(isInstructor && instructorId ? instructorId : 'all');
-      
+
       // 이전 발송 이력 확인 및 강사 목록 로드
       checkPreviousLogs();
       fetchSurveyInstructors();
@@ -98,28 +98,28 @@ export const SendSurveyResultsDialog = ({
   const fetchSurveyInstructors = async () => {
     try {
       const instructors: { id: string; name: string; email: string | null }[] = [];
-      
+
       // 1. survey의 직접 instructor_id 확인
       const { data: survey, error: surveyError } = await supabase
         .from('surveys')
         .select('instructor_id')
         .eq('id', surveyId)
         .single();
-      
+
       if (surveyError) throw surveyError;
-      
+
       if (survey?.instructor_id) {
         const { data: instructor } = await supabase
           .from('instructors')
           .select('id, name, email')
           .eq('id', survey.instructor_id)
           .single();
-        
+
         if (instructor) {
           instructors.push(instructor);
         }
       }
-      
+
       // 2. survey_instructors 테이블에서 연결된 강사들 확인
       const { data: surveyInstructors, error: siError } = await supabase
         .from('survey_instructors')
@@ -128,7 +128,7 @@ export const SendSurveyResultsDialog = ({
           instructors (id, name, email)
         `)
         .eq('survey_id', surveyId);
-      
+
       if (!siError && surveyInstructors) {
         surveyInstructors.forEach((si: any) => {
           if (si.instructors && !instructors.find(i => i.id === si.instructors.id)) {
@@ -136,7 +136,7 @@ export const SendSurveyResultsDialog = ({
           }
         });
       }
-      
+
       setAvailableInstructors(instructors);
     } catch (error) {
       console.error('Failed to fetch survey instructors:', error);
@@ -146,21 +146,21 @@ export const SendSurveyResultsDialog = ({
   const fetchRoleUserCounts = async () => {
     try {
       const counts: Record<string, number> = {};
-      
+
       // 각 역할별 사용자 수 조회
       for (const role of ['admin', 'operator', 'director', 'instructor'] as const) {
         if (role === 'instructor') {
           // 강사는 현재 설문에 연결된 강사만 카운트
           // fetchSurveyInstructors가 먼저 실행되어야 하므로 직접 조회
           const instructors: { id: string; name: string; email: string | null }[] = [];
-          
+
           // 1. survey의 직접 instructor_id 확인
           const { data: survey } = await supabase
             .from('surveys')
             .select('instructor_id')
             .eq('id', surveyId)
             .single();
-          
+
           if (survey?.instructor_id) {
             const { data: instructor } = await supabase
               .from('instructors')
@@ -169,32 +169,32 @@ export const SendSurveyResultsDialog = ({
               .single();
             if (instructor?.email) instructors.push(instructor);
           }
-          
+
           // 2. survey_instructors 테이블에서 연결된 강사 확인
           const { data: surveyInstructors } = await supabase
             .from('survey_instructors')
             .select('instructor_id, instructors(id, name, email)')
             .eq('survey_id', surveyId);
-          
+
           surveyInstructors?.forEach((si: any) => {
             if (si.instructors?.email && !instructors.find(i => i.id === si.instructors.id)) {
               instructors.push(si.instructors);
             }
           });
-          
+
           // 3. survey_sessions 테이블에서 연결된 강사 확인
           const { data: sessions } = await supabase
             .from('survey_sessions')
             .select('instructor_id, instructors(id, name, email)')
             .eq('survey_id', surveyId)
             .not('instructor_id', 'is', null);
-          
+
           sessions?.forEach((session: any) => {
             if (session.instructors?.email && !instructors.find(i => i.id === session.instructors.id)) {
               instructors.push(session.instructors);
             }
           });
-          
+
           counts[role] = instructors.length;
         } else {
           // 다른 역할들은 기존 로직대로
@@ -203,35 +203,35 @@ export const SendSurveyResultsDialog = ({
             .from('user_roles')
             .select('user_id')
             .eq('role', role);
-          
+
           if (roleError) {
             console.error(`Error fetching ${role} user_ids:`, roleError);
             continue;
           }
-          
+
           if (!userRoles || userRoles.length === 0) {
             counts[role] = 0;
             continue;
           }
-          
+
           const userIds = userRoles.map(ur => ur.user_id);
-          
+
           // 2단계: profiles에서 해당 user_id들의 이메일 가져오기
           const { data: profiles, error: profileError } = await supabase
             .from('profiles')
             .select('email')
             .in('id', userIds)
             .not('email', 'is', null);
-          
+
           if (profileError) {
             console.error(`Error fetching ${role} profiles:`, profileError);
             continue;
           }
-          
+
           counts[role] = profiles?.length || 0;
         }
       }
-      
+
       setRoleUserCounts(counts);
     } catch (error) {
       console.error('Failed to fetch role user counts:', error);
@@ -309,7 +309,7 @@ export const SendSurveyResultsDialog = ({
     // 프리셋에서 역할과 이메일 분리
     const roles = recipients.filter(r => ['admin', 'operator', 'director', 'instructor'].includes(r));
     const emails = recipients.filter(r => r.includes('@'));
-    
+
     if (isInstructor) {
       setSelectedRoles(['instructor']);
       setAdditionalEmails(emails);
@@ -345,7 +345,7 @@ export const SendSurveyResultsDialog = ({
       setLoading(true);
       try {
         const allRecipients = [...selectedRoles, ...additionalEmails];
-        
+
         const { data, error } = await supabase.functions.invoke('send-survey-results', {
           body: {
             surveyId,
@@ -383,18 +383,18 @@ export const SendSurveyResultsDialog = ({
     setLoading(true);
     try {
       const allRecipients = [...selectedRoles, ...additionalEmails];
-      
+
       const requestBody: any = {
         surveyId,
         recipients: allRecipients,
         force: forceResend,
       };
-      
+
       // 특정 강사가 선택된 경우에만 targetInstructorIds 전달
       if (selectedInstructorId !== 'all') {
         requestBody.targetInstructorIds = [selectedInstructorId];
       }
-      
+
       const { data, error } = await supabase.functions.invoke('send-survey-results', {
         body: requestBody,
       });
@@ -402,7 +402,7 @@ export const SendSurveyResultsDialog = ({
       if (error) throw error;
 
       setSendResult(data);
-      
+
       const sentCount = typeof data?.sent === 'number' ? data.sent : Array.isArray(data?.sent) ? data.sent.length : 0;
       const totalCount = typeof data?.total === 'number' ? data.total : (Array.isArray(data?.recipients) ? data.recipients.length : sentCount);
 
@@ -518,11 +518,10 @@ export const SendSurveyResultsDialog = ({
                     return (
                       <div
                         key={role}
-                        className={`flex items-center space-x-2 p-3 rounded-lg border transition-colors ${
-                          selectedRoles.includes(role)
+                        className={`flex items-center space-x-2 p-3 rounded-lg border transition-colors ${selectedRoles.includes(role)
                             ? 'border-primary bg-primary/5'
                             : 'border-border hover:border-primary/50'
-                        } cursor-pointer`}
+                          } cursor-pointer`}
                         onClick={() => {
                           if (selectedRoles.includes(role)) {
                             setSelectedRoles(prev => prev.filter(r => r !== role));
@@ -534,7 +533,7 @@ export const SendSurveyResultsDialog = ({
                         <Checkbox
                           id={`role-${role}`}
                           checked={selectedRoles.includes(role)}
-                          onCheckedChange={() => {}}
+                          onCheckedChange={() => { }}
                         />
                         <Label
                           htmlFor={`role-${role}`}
@@ -569,7 +568,7 @@ export const SendSurveyResultsDialog = ({
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
-                  
+
                   {additionalEmails.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {additionalEmails.map((email) => (
@@ -611,27 +610,26 @@ export const SendSurveyResultsDialog = ({
                           const emailResults = log.results?.emailResults || [];
                           const sentRecipients = emailResults.filter((r: any) => r.status === 'sent');
                           const failedRecipients = emailResults.filter((r: any) => r.status === 'failed');
-                          
+
                           return (
                             <div key={log.id} className="space-y-2 pb-3 border-b last:border-b-0">
                               <div className="text-sm">
-                                <strong>{index + 1}.</strong> {new Date(log.created_at).toLocaleString('ko-KR')} - 
-                                <span className={`ml-1 font-semibold ${
-                                  log.status === 'success' ? 'text-green-600' : 
-                                  log.status === 'partial' ? 'text-amber-600' : 'text-red-600'
-                                }`}>
-                                  {log.status === 'success' ? '전체 성공' : 
-                                   log.status === 'partial' ? '부분 성공' : '실패'}
+                                <strong>{index + 1}.</strong> {new Date(log.created_at).toLocaleString('ko-KR')} -
+                                <span className={`ml-1 font-semibold ${log.status === 'success' ? 'text-green-600' :
+                                    log.status === 'partial' ? 'text-amber-600' : 'text-red-600'
+                                  }`}>
+                                  {log.status === 'success' ? '전체 성공' :
+                                    log.status === 'partial' ? '부분 성공' : '실패'}
                                 </span>
                                 {' '}({log.sent_count || 0}명 발송)
                               </div>
-                              
+
                               {surveyInfo && (
                                 <div className="text-xs text-muted-foreground pl-5">
                                   강사: {surveyInfo.instructor || '미등록'} · {surveyInfo.course || '강의'} ({surveyInfo.year}-{surveyInfo.round}차)
                                 </div>
                               )}
-                              
+
                               {sentRecipients.length > 0 && (
                                 <div className="pl-5 text-xs">
                                   <div className="font-medium text-green-600 mb-1">✓ 발송 성공 ({sentRecipients.length}명):</div>
@@ -644,7 +642,7 @@ export const SendSurveyResultsDialog = ({
                                   </div>
                                 </div>
                               )}
-                              
+
                               {failedRecipients.length > 0 && (
                                 <div className="pl-5 text-xs">
                                   <div className="font-medium text-red-600 mb-1">✗ 발송 실패 ({failedRecipients.length}명):</div>
@@ -670,8 +668,8 @@ export const SendSurveyResultsDialog = ({
                       </div>
                     </AlertDescription>
                   </Alert>
-                  
-                  <div className="flex items-center space-x-2 p-3 rounded-lg border border-amber-200 bg-amber-50">
+
+                  <div className="flex items-center space-x-2 p-3 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800">
                     <Checkbox
                       id="force-resend"
                       checked={forceResend}
@@ -679,7 +677,7 @@ export const SendSurveyResultsDialog = ({
                     />
                     <Label
                       htmlFor="force-resend"
-                      className="text-sm cursor-pointer"
+                      className="text-sm cursor-pointer text-amber-900 dark:text-amber-100"
                     >
                       <strong>강제 재전송</strong> (이전 발송 이력 무시하고 모든 수신자에게 다시 전송)
                     </Label>
@@ -816,7 +814,7 @@ export const SendSurveyResultsDialog = ({
             <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={loading}>
               취소
             </Button>
-            
+
             {step < 3 ? (
               <Button onClick={handleNextStep} disabled={loading || totalRecipients === 0}>
                 {loading ? (
