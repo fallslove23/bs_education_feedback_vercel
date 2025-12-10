@@ -192,19 +192,26 @@ export default function PersonalDashboard({ targetInstructorId }: PersonalDashbo
   const radarData = useMemo(() => {
     if (!stats.courseBreakdown || stats.courseBreakdown.length === 0) return [];
 
-    // Calculate averages across displayed courses (weighted by responses)
-    const totalWeight = stats.courseBreakdown.reduce((sum, item) => sum + item.responses, 0);
-    const weightedAvg = (key: 'avgInstructor' | 'avgCourse' | 'avgOperation') => {
-      if (totalWeight === 0) return 0;
-      const sum = stats.courseBreakdown.reduce((acc, item) => acc + ((item[key] || 0) * item.responses), 0);
-      return Number((sum / totalWeight).toFixed(1));
+    const calculateWeightedAvg = (key: 'avgInstructor' | 'avgCourse' | 'avgOperation') => {
+      let totalVal = 0;
+      let totalRes = 0;
+      stats.courseBreakdown.forEach(item => {
+        const val = item[key];
+        if (val !== null && val > 0) {
+          totalVal += val * item.responses;
+          totalRes += item.responses;
+        }
+      });
+      return totalRes === 0 ? 0 : Number((totalVal / totalRes).toFixed(1));
     };
 
-    return [
-      { subject: '강사 역량', value: weightedAvg('avgInstructor'), fullMark: 10 },
-      { subject: '교육 내용', value: weightedAvg('avgCourse'), fullMark: 10 },
-      { subject: '운영 환경', value: weightedAvg('avgOperation'), fullMark: 10 },
+    const data = [
+      { subject: '강사 역량', value: calculateWeightedAvg('avgInstructor'), fullMark: 10 },
+      { subject: '교육 내용', value: calculateWeightedAvg('avgCourse'), fullMark: 10 },
+      { subject: '운영 환경', value: calculateWeightedAvg('avgOperation'), fullMark: 10 },
     ];
+
+    return data.filter(item => item.value > 0);
   }, [stats.courseBreakdown]);
 
   const loadSourceSurveys = async (ids: string[]) => {
@@ -638,7 +645,7 @@ export default function PersonalDashboard({ targetInstructorId }: PersonalDashbo
                     </ResponsiveContainer>
                     <div className="text-center mt-[-10px]">
                       <p className="text-sm font-medium text-foreground">
-                        종합 평균: {(radarData.reduce((a, b) => a + b.value, 0) / 3).toFixed(1)}점
+                        종합 평균: {(radarData.length > 0 ? (radarData.reduce((a, b) => a + b.value, 0) / radarData.length) : 0).toFixed(1)}점
                       </p>
                     </div>
                   </div>
