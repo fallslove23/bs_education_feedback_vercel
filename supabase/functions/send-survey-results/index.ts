@@ -325,7 +325,7 @@ const handler = async (req: Request): Promise<Response> => {
                       <td width="8"></td>
                       ` : ''}
                       <td style="color:rgba(255,255,255,0.9);font-size:12px;">
-                        응답 ${responseCount}명 (${responseRate}%)
+                        응답 ${responseCount}명
                       </td>
                     </tr>
                   </table>

@@ -319,6 +319,119 @@ export const SendSurveyResultsDialog = ({
     }
   };
 
+  /* New logic: Generate preview locally to avoid Edge Function deployment issues */
+  const generatePreview = async () => {
+    try {
+      setLoading(true);
+
+      console.log('Generating preview locally for survey:', surveyId);
+
+      // 1. Fetch Survey Info
+      const { data: surveyData, error: surveyErr } = await supabase
+        .from('surveys')
+        .select('*')
+        .eq('id', surveyId)
+        .single();
+
+      if (surveyErr) throw surveyErr;
+
+      // 2. Fetch Sessions & Instructor mapping
+      const { data: sessions, error: sessErr } = await supabase
+        .from('survey_sessions')
+        .select(`id, session_name, instructor_id, instructors (id, name, email)`)
+        .eq('survey_id', surveyId);
+
+      if (sessErr) throw sessErr;
+
+      // 3. Fetch all Instructors (for top summary)
+      const { data: surveyInstructors, error: instErr } = await supabase
+        .from('survey_instructors')
+        .select(`instructor_id, instructors (id, name, email)`)
+        .eq('survey_id', surveyId);
+
+      // Merge unique instructors
+      const instructors = new Map();
+      sessions?.forEach((s: any) => {
+        if (s.instructors) instructors.set(s.instructors.id, s.instructors);
+      });
+      surveyInstructors?.forEach((si: any) => {
+        if (si.instructors) instructors.set(si.instructors.id, si.instructors);
+      });
+
+      // 4. Fetch Questions
+      const { data: questions, error: qErr } = await supabase
+        .from('survey_questions')
+        .select('*')
+        .eq('survey_id', surveyId)
+        .order('order_index');
+
+      if (qErr) throw qErr;
+
+      // 5. Fetch ALL Responses
+      const { data: responses, error: rErr } = await supabase
+        .from('survey_responses')
+        .select('id, session_id')
+        .eq('survey_id', surveyId)
+        .eq('is_test', false);
+
+      if (rErr) throw rErr;
+
+      const responseIds = responses?.map(r => r.id) || [];
+      const totalRespondents = responseIds.length;
+
+      if (totalRespondents === 0) {
+        throw new Error("응답이 없어 미리보기를 생성할 수 없습니다.");
+      }
+
+      // 6. Fetch Answers
+      const { data: answers, error: aErr } = await supabase
+        .from('question_answers')
+        .select('question_id, answer_value, answer_text')
+        .in('response_id', responseIds);
+
+      if (aErr) throw aErr;
+
+      // 7. Calculate Stats
+      const { calculateSurveyStats, generateSurveyEmailContent } = await import('@/utils/surveyEmailInfos');
+
+      const questionStats = calculateSurveyStats(questions || [], answers || [], sessions || [], surveyInstructors || []);
+      const instructorList = Array.from(instructors.values());
+
+      // 8. Generate Content
+      const content = generateSurveyEmailContent(
+        {
+          title: surveyData.title,
+          course_name: surveyData.course_name,
+          education_year: surveyData.education_year,
+          education_round: surveyData.education_round
+        },
+        questionStats,
+        instructorList,
+        totalRespondents
+      );
+
+      const resolvedRecipients = [...selectedRoles, ...additionalEmails];
+
+      setEmailPreview({
+        subject: content.subject,
+        htmlContent: content.html,
+        textContent: content.text,
+        recipients: resolvedRecipients
+      });
+
+      setStep(2);
+    } catch (err: any) {
+      console.error('Preview generation failed:', err);
+      toast({
+        title: "미리보기 생성 실패",
+        description: err.message || "오류가 발생했습니다.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleNextStep = async () => {
     if (step === 1) {
       // 응답이 없으면 경고
@@ -340,34 +453,7 @@ export const SendSurveyResultsDialog = ({
         });
         return;
       }
-
-      // 이메일 미리보기 로드
-      setLoading(true);
-      try {
-        const allRecipients = [...selectedRoles, ...additionalEmails];
-
-        const { data, error } = await supabase.functions.invoke('send-survey-results', {
-          body: {
-            surveyId,
-            recipients: allRecipients,
-            previewOnly: true,
-          },
-        });
-
-        if (error) throw error;
-
-        setEmailPreview(data);
-        setStep(2);
-      } catch (error: any) {
-        console.error('Failed to load email preview:', error);
-        toast({
-          title: '미리보기 로드 실패',
-          description: error.message || '이메일 미리보기를 불러오는 중 오류가 발생했습니다.',
-          variant: 'destructive',
-        });
-      } finally {
-        setLoading(false);
-      }
+      await generatePreview();
     } else if (step === 2) {
       setStep(3);
     }
@@ -519,8 +605,8 @@ export const SendSurveyResultsDialog = ({
                       <div
                         key={role}
                         className={`flex items-center space-x-2 p-3 rounded-lg border transition-colors ${selectedRoles.includes(role)
-                            ? 'border-primary bg-primary/5'
-                            : 'border-border hover:border-primary/50'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-primary/50'
                           } cursor-pointer`}
                         onClick={() => {
                           if (selectedRoles.includes(role)) {
@@ -616,7 +702,7 @@ export const SendSurveyResultsDialog = ({
                               <div className="text-sm">
                                 <strong>{index + 1}.</strong> {new Date(log.created_at).toLocaleString('ko-KR')} -
                                 <span className={`ml-1 font-semibold ${log.status === 'success' ? 'text-green-600' :
-                                    log.status === 'partial' ? 'text-amber-600' : 'text-red-600'
+                                  log.status === 'partial' ? 'text-amber-600' : 'text-red-600'
                                   }`}>
                                   {log.status === 'success' ? '전체 성공' :
                                     log.status === 'partial' ? '부분 성공' : '실패'}
