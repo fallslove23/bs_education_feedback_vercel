@@ -462,38 +462,64 @@ export default function PersonalDashboard({ targetInstructorId }: PersonalDashbo
               {stats.ratingDistribution.length === 0 ? (
                 <ChartEmptyState description="분포 데이터가 없습니다" />
               ) : (
-                <div className="space-y-4">
-                  <ResponsiveContainer width="100%" height={isMobile ? 220 : 250}>
-                    <PieChart>
-                      <Pie
-                        data={stats.ratingDistribution}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={isMobile ? 60 : 80}
-                        label={isMobile ? false : ({ name, percentage }) => `${name} (${percentage}%)`}
-                      >
-                        {stats.ratingDistribution.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={RATING_COLORS[index % RATING_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          fontSize: isMobile ? '12px' : '14px',
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="grid grid-cols-5 gap-2">
-                    {stats.ratingDistribution.map((bucket, index) => (
-                      <div key={bucket.name} className="text-center">
-                        <div
-                          className="h-2 rounded-full mb-1"
-                          style={{ backgroundColor: RATING_COLORS[index] }}
+                <div className="flex flex-col items-center">
+                  <div className="h-[280px] w-full sm:h-[320px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={stats.ratingDistribution}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={isMobile ? 55 : 70}
+                          outerRadius={isMobile ? 90 : 120}
+                          paddingAngle={3}
+                          cornerRadius={6}
+                          data={stats.ratingDistribution}
+                          label={({ name, percent }) => {
+                            return percent > 0.05 ? `${name} ${(percent * 100).toFixed(0)}%` : '';
+                          }}
+                          labelLine={false}
+                        >
+                          {stats.ratingDistribution.map((entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={RATING_COLORS[index % RATING_COLORS.length]}
+                              stroke="hsl(var(--background))"
+                              strokeWidth={3}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--background))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                            fontSize: isMobile ? '12px' : '14px',
+                          }}
+                          itemStyle={{ color: 'hsl(var(--foreground))' }}
+                          formatter={(value: number) => [`${value}명`, '응답']}
                         />
-                        <p className="text-xs font-medium">{bucket.name}</p>
-                        <p className="text-xs text-muted-foreground">{bucket.value}개</p>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mt-6 w-full max-w-3xl px-2">
+                    {stats.ratingDistribution.map((bucket, index) => (
+                      <div key={bucket.name} className="flex items-center gap-3 p-3 rounded-xl border bg-card/50 shadow-sm">
+                        <div
+                          className="h-3 w-3 rounded-full shrink-0"
+                          style={{ backgroundColor: RATING_COLORS[index % RATING_COLORS.length] }}
+                        />
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs text-muted-foreground truncate">{bucket.name}</span>
+                          <div className="flex items-end gap-1.5">
+                            <span className="text-lg font-bold leading-none">{bucket.percentage}%</span>
+                            <span className="text-xs text-muted-foreground mb-0.5">({bucket.value}명)</span>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
