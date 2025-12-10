@@ -23,9 +23,92 @@ export interface TrendPoint {
 export interface CourseBreakdownItem {
   course: string;
   avgSatisfaction: number;
+  avgInstructor: number | null;
+  avgCourse: number | null;
+  avgOperation: number | null;
   responses: number;
   surveys: number;
   satisfactionPercentage: number;
+}
+
+// ... (skipping unchanged parts)
+
+export function buildCourseBreakdown(records: InstructorStatsRecord[], includeTestData: boolean): CourseBreakdownItem[] {
+  const buckets = new Map<string, {
+    course: string;
+    responses: number;
+    surveys: number;
+    weightedSum: number;
+    weight: number;
+    weightedInstructor: number;
+    weightInstructor: number;
+    weightedCourse: number;
+    weightCourse: number;
+    weightedOperation: number;
+    weightOperation: number;
+  }>();
+
+  records.forEach(record => {
+    const metrics = getCombinedRecordMetrics(record, includeTestData);
+    if (!metrics.normalizedCourseName) return;
+
+    const bucket = buckets.get(metrics.normalizedCourseName) ?? {
+      course: metrics.normalizedCourseName,
+      responses: 0,
+      surveys: 0,
+      weightedSum: 0,
+      weight: 0,
+      weightedInstructor: 0,
+      weightInstructor: 0,
+      weightedCourse: 0,
+      weightCourse: 0,
+      weightedOperation: 0,
+      weightOperation: 0,
+    };
+
+    bucket.responses += metrics.responseCount;
+    bucket.surveys += metrics.surveyCount;
+
+    if (metrics.avgOverall !== null && metrics.responseCount > 0) {
+      bucket.weightedSum += metrics.avgOverall * metrics.responseCount;
+      bucket.weight += metrics.responseCount;
+    }
+
+    if (metrics.avgInstructor !== null && metrics.responseCount > 0) {
+      bucket.weightedInstructor += metrics.avgInstructor * metrics.responseCount;
+      bucket.weightInstructor += metrics.responseCount;
+    }
+
+    if (metrics.avgCourse !== null && metrics.responseCount > 0) {
+      bucket.weightedCourse += metrics.avgCourse * metrics.responseCount;
+      bucket.weightCourse += metrics.responseCount;
+    }
+
+    if (metrics.avgOperation !== null && metrics.responseCount > 0) {
+      bucket.weightedOperation += metrics.avgOperation * metrics.responseCount;
+      bucket.weightOperation += metrics.responseCount;
+    }
+
+    buckets.set(metrics.normalizedCourseName, bucket);
+  });
+
+  return Array.from(buckets.values())
+    .map(bucket => {
+      const average = bucket.weight > 0 ? bucket.weightedSum / bucket.weight : 0;
+      const getAvg = (sum: number, w: number) => (w > 0 ? Number((sum / w).toFixed(1)) : null);
+
+      return {
+        course: bucket.course,
+        responses: bucket.responses,
+        surveys: bucket.surveys,
+        avgSatisfaction: Number(average.toFixed(1)),
+        avgInstructor: getAvg(bucket.weightedInstructor, bucket.weightInstructor),
+        avgCourse: getAvg(bucket.weightedCourse, bucket.weightCourse),
+        avgOperation: getAvg(bucket.weightedOperation, bucket.weightOperation),
+        satisfactionPercentage: Math.round(average * 10),
+      } satisfies CourseBreakdownItem;
+    })
+    .sort((a, b) => b.avgSatisfaction - a.avgSatisfaction);
 }
 
 export interface RatingBucket {
@@ -262,15 +345,15 @@ export function getCombinedRecordMetrics(record: InstructorStatsRecord, includeT
 
   const sources = includeTestData
     ? [
-        realSource,
-        {
-          metrics: record.test,
-          responseCount: record.testResponseCount,
-          surveyCount: record.testSurveyCount,
-          activeSurveyCount: record.testActiveSurveyCount,
-          textResponseCount: record.testTextResponseCount,
-        },
-      ]
+      realSource,
+      {
+        metrics: record.test,
+        responseCount: record.testResponseCount,
+        surveyCount: record.testSurveyCount,
+        activeSurveyCount: record.testActiveSurveyCount,
+        textResponseCount: record.testTextResponseCount,
+      },
+    ]
     : [realSource];
 
   const questionStats = mergeQuestionStatsArrays(sources.map(source => source.metrics.questionStats));
@@ -295,12 +378,12 @@ export function getCombinedRecordMetrics(record: InstructorStatsRecord, includeT
 
   const hasTestContribution = includeTestData
     ? record.testResponseCount > 0 ||
-      record.testSurveyCount > 0 ||
-      record.testActiveSurveyCount > 0 ||
-      record.testTextResponseCount > 0 ||
-      record.test.questionStats.length > 0 ||
-      record.test.textResponses.length > 0 ||
-      distributionTotal(record.test.ratingDistribution) > 0
+    record.testSurveyCount > 0 ||
+    record.testActiveSurveyCount > 0 ||
+    record.testTextResponseCount > 0 ||
+    record.test.questionStats.length > 0 ||
+    record.test.textResponses.length > 0 ||
+    distributionTotal(record.test.ratingDistribution) > 0
     : false;
 
   return {
@@ -403,50 +486,7 @@ export function buildTrendSeries(records: InstructorStatsRecord[], includeTestDa
     });
 }
 
-export function buildCourseBreakdown(records: InstructorStatsRecord[], includeTestData: boolean): CourseBreakdownItem[] {
-  const buckets = new Map<string, {
-    course: string;
-    responses: number;
-    surveys: number;
-    weightedSum: number;
-    weight: number;
-  }>();
 
-  records.forEach(record => {
-    const metrics = getCombinedRecordMetrics(record, includeTestData);
-    if (!metrics.normalizedCourseName) return;
-
-    const bucket = buckets.get(metrics.normalizedCourseName) ?? {
-      course: metrics.normalizedCourseName,
-      responses: 0,
-      surveys: 0,
-      weightedSum: 0,
-      weight: 0,
-    };
-
-    bucket.responses += metrics.responseCount;
-    bucket.surveys += metrics.surveyCount;
-    if (metrics.avgOverall !== null && metrics.responseCount > 0) {
-      bucket.weightedSum += metrics.avgOverall * metrics.responseCount;
-      bucket.weight += metrics.responseCount;
-    }
-
-    buckets.set(metrics.normalizedCourseName, bucket);
-  });
-
-  return Array.from(buckets.values())
-    .map(bucket => {
-      const average = bucket.weight > 0 ? bucket.weightedSum / bucket.weight : 0;
-      return {
-        course: bucket.course,
-        responses: bucket.responses,
-        surveys: bucket.surveys,
-        avgSatisfaction: Number(average.toFixed(1)),
-        satisfactionPercentage: Math.round(average * 10),
-      } satisfies CourseBreakdownItem;
-    })
-    .sort((a, b) => b.avgSatisfaction - a.avgSatisfaction);
-}
 
 export function buildRatingDistribution(records: InstructorStatsRecord[], includeTestData: boolean): RatingBucket[] {
   const distribution = emptyDistribution();

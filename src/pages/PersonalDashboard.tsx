@@ -13,9 +13,244 @@ import {
   BarChart,
   Bar,
   Legend,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
 } from 'recharts';
-import { Award, BarChart3, TrendingUp, Users, Download, HelpCircle, ListChecks } from 'lucide-react';
+import {
+  Award, BarChart3, TrendingUp, Users, Download, HelpCircle, ListChecks,
+  Lightbulb, ThumbsUp, ThumbsDown
+} from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+// ... (imports continue)
+
+// ... (skipping unchanged code)
+
+const radarData = useMemo(() => {
+  if (!stats.courseBreakdown || stats.courseBreakdown.length === 0) return [];
+
+  // Calculate averages across displayed courses (weighted by responses)
+  const totalWeight = stats.courseBreakdown.reduce((sum, item) => sum + item.responses, 0);
+  const weightedAvg = (key: 'avgInstructor' | 'avgCourse' | 'avgOperation') => {
+    if (totalWeight === 0) return 0;
+    const sum = stats.courseBreakdown.reduce((acc, item) => acc + ((item[key] || 0) * item.responses), 0);
+    return Number((sum / totalWeight).toFixed(1));
+  };
+
+  return [
+    { subject: '강사 역량', value: weightedAvg('avgInstructor'), fullMark: 10 },
+    { subject: '교육 내용', value: weightedAvg('avgCourse'), fullMark: 10 },
+    { subject: '운영 환경', value: weightedAvg('avgOperation'), fullMark: 10 },
+  ];
+}, [stats.courseBreakdown]);
+
+// ... (skipping unchanged code until TabsContent value="courses")
+
+{/* Course Breakdown & Analysis */ }
+<TabsContent value="courses" className="space-y-6">
+  {stats.courseBreakdown.length === 0 ? (
+    <ChartEmptyState description="과정별 데이터가 없습니다" />
+  ) : (
+    <div className="grid gap-6 md:grid-cols-7">
+      {/* Radar Chart Section */}
+      <Card className="md:col-span-3">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Lightbulb className="h-5 w-5 text-yellow-500" />
+            영역별 분석
+          </CardTitle>
+          <CardDescription>
+            {selectedCourse === 'all'
+              ? '전체 과정의 평균 영역별 강점 분석'
+              : `${selectedCourse} 과정의 영역별 분석`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[300px] w-full flex flex-col items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
+                <PolarGrid stroke="hsl(var(--muted))" />
+                <PolarAngleAxis
+                  dataKey="subject"
+                  tick={{ fill: 'hsl(var(--foreground))', fontSize: 13, fontWeight: 600 }}
+                />
+                <PolarRadiusAxis
+                  angle={30}
+                  domain={[0, 10]}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                  tickCount={6}
+                />
+                <Radar
+                  name="평균 점수"
+                  dataKey="value"
+                  stroke="hsl(var(--primary))"
+                  fill="hsl(var(--primary))"
+                  fillOpacity={0.3}
+                />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: '8px',
+                    border: '1px solid hsl(var(--border))',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                  }}
+                />
+              </RadarChart>
+            </ResponsiveContainer>
+            <div className="text-center mt-[-10px]">
+              <p className="text-sm font-medium text-foreground">
+                종합 평균: {(radarData.reduce((a, b) => a + b.value, 0) / 3).toFixed(1)}점
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Detailed Table Section */}
+      <Card className="md:col-span-4 flex flex-col">
+        <CardHeader>
+          <CardTitle>과정별 상세 지표</CardTitle>
+          <CardDescription>세부 영역 점수 (10점 만점)</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0 flex-1 overflow-auto">
+          <div className="max-h-[400px] overflow-auto">
+            <Table>
+              <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                <TableRow>
+                  <TableHead className="w-[30%]">과정명</TableHead>
+                  <TableHead className="text-center w-[15%]">강사</TableHead>
+                  <TableHead className="text-center w-[15%]">내용</TableHead>
+                  <TableHead className="text-center w-[15%]">운영</TableHead>
+                  <TableHead className="text-right w-[15%]">총점</TableHead>
+                  <TableHead className="text-right w-[10%] opacity-50"><Users className="h-3 w-3 ml-auto" /></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {stats.courseBreakdown.map((course) => (
+                  <TableRow key={course.course} className="hover:bg-muted/5">
+                    <TableCell className="font-medium text-xs sm:text-sm">{course.course}</TableCell>
+                    <TableCell className="text-center">
+                      <span className={`px-2 py-0.5 rounded text-xs font-semibold ${(course.avgInstructor || 0) >= 9.5 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : ''
+                        }`}>
+                        {course.avgInstructor?.toFixed(1) || '-'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center text-xs sm:text-sm">{course.avgCourse?.toFixed(1) || '-'}</TableCell>
+                    <TableCell className="text-center text-xs sm:text-sm">{course.avgOperation?.toFixed(1) || '-'}</TableCell>
+                    <TableCell className="text-right font-bold text-primary">
+                      {course.avgSatisfaction.toFixed(1)}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground text-xs">
+                      {course.responses}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )}
+</TabsContent>
+
+{/* Question Insights */ }
+<TabsContent value="questions" className="space-y-6">
+  <div className="grid gap-6 md:grid-cols-2">
+    {/* Best Items */}
+    <Card className="border-l-4 border-l-blue-500 shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2 text-blue-600 dark:text-blue-400">
+          <ThumbsUp className="h-5 w-5" />
+          Best Highlights (강점)
+        </CardTitle>
+        <CardDescription>수강생들로부터 가장 높은 평가를 받은 Top 5 항목입니다.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {stats.questionInsights.questions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+            <ChartEmptyState className="h-16 opacity-20" />
+            <p className="mt-2 text-sm">데이터 없음</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {stats.questionInsights.questions
+              .filter(q => q.average !== null)
+              .sort((a, b) => (b.average || 0) - (a.average || 0))
+              .slice(0, 5)
+              .map((q, idx) => (
+                <div key={idx} className="group">
+                  <div className="flex justify-between items-start mb-1.5">
+                    <div className="flex items-start gap-3">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[10px] font-bold text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                        {idx + 1}
+                      </span>
+                      <p className="text-sm font-medium leading-tight group-hover:text-blue-600 transition-colors">
+                        {q.questionText}
+                      </p>
+                    </div>
+                    <span className="text-sm font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap ml-2">
+                      {q.average?.toFixed(1)}점
+                    </span>
+                  </div>
+                  <div className="pl-8">
+                    <Progress value={((q.average || 0) / 10) * 100} className="h-1.5 bg-blue-100 dark:bg-blue-900/20" indicatorClassName="bg-blue-500" />
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+
+    {/* Worst Items */}
+    <Card className="border-l-4 border-l-amber-500 shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2 text-amber-600 dark:text-amber-400">
+          <ThumbsDown className="h-5 w-5" />
+          Needs Attention (개선 필요)
+        </CardTitle>
+        <CardDescription>상대적으로 낮은 점수를 받아 개선이 필요한 항목입니다.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {stats.questionInsights.questions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+            <ChartEmptyState className="h-16 opacity-20" />
+            <p className="mt-2 text-sm">데이터 없음</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {stats.questionInsights.questions
+              .filter(q => q.average !== null)
+              .sort((a, b) => (a.average || 0) - (b.average || 0))
+              .slice(0, 5)
+              .map((q, idx) => (
+                <div key={idx} className="group">
+                  <div className="flex justify-between items-start mb-1.5">
+                    <div className="flex items-start gap-3">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+                        {idx + 1}
+                      </span>
+                      <p className="text-sm font-medium leading-tight group-hover:text-amber-600 transition-colors">
+                        {q.questionText}
+                      </p>
+                    </div>
+                    <span className="text-sm font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap ml-2">
+                      {q.average?.toFixed(1)}점
+                    </span>
+                  </div>
+                  <div className="pl-8">
+                    <Progress value={((q.average || 0) / 10) * 100} className="h-1.5 bg-amber-100 dark:bg-amber-900/20" indicatorClassName="bg-amber-500" />
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  </div>
+</TabsContent>
 import { useInstructorStats } from '@/hooks/useInstructorStats';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useMyStats } from '@/hooks/useMyStats';
@@ -507,7 +742,6 @@ export default function PersonalDashboard({ targetInstructorId }: PersonalDashbo
                           outerRadius={isMobile ? 90 : 120}
                           paddingAngle={3}
                           cornerRadius={6}
-                          data={stats.ratingDistribution}
                           label={({ name, percent }) => {
                             return percent > 0.05 ? `${name} ${(percent * 100).toFixed(0)}%` : '';
                           }}
