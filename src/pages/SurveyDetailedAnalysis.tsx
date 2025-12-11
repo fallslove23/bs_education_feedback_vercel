@@ -1,3 +1,4 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
@@ -12,13 +13,13 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { ArrowLeft, Download, Mail, Printer, Loader2, ChevronDown, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, Mail, Printer, Loader2, ChevronDown, Trash2, Wand2, ThumbsUp, ThumbsDown, MessageSquareQuote } from 'lucide-react';
 
 import { supabase } from '@/integrations/supabase/client';
 import { SurveyDetailRepository } from '@/repositories/surveyDetailRepository';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -61,6 +62,13 @@ interface SubjectOption {
   key: string;        // 드롭다운 value
   label: string;      // 표시용 "강사 - 과목"
   sessionIds: string[]; // 이 과목에 속하는 세션 ID들(Part.1/2 등 포함)
+}
+
+interface AIAnalysisResult {
+  summary: string;
+  positiveKeywords: string[];
+  improvements: string[];
+  sentiment: 'Positive' | 'Neutral' | 'Negative';
 }
 
 const RATING_QUESTION_TYPES = new Set(['rating', 'scale']);
@@ -129,6 +137,100 @@ const SurveyDetailedAnalysis = () => {
   const [detailStats, setDetailStats] = useState<any>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // AI Analysis State
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [aiAnalysisResult, setAiAnalysisResult] = useState<AIAnalysisResult | null>(null);
+
+  const handleAnalyzeAI = async () => {
+    if (!detailStats || !detailStats.questions) return;
+
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+      toast({
+        title: "API 키 설정 필요",
+        description: "VITE_GEMINI_API_KEY 환경변수가 설정되지 않았습니다.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      // 주관식 응답 수집 (Collect open-ended responses)
+      const openEndedResponses: string[] = [];
+      detailStats.questions.forEach((q: any) => {
+        if (!RATING_QUESTION_TYPES.has(q.type) && q.answers && q.answers.length > 0) {
+          q.answers.forEach((a: any) => {
+            if (typeof a === 'string' && a.trim().length > 0 && a !== '-') {
+              openEndedResponses.push(`[질문: ${q.question_text}] 답변: ${a}`);
+            } else if (a.answer_text && a.answer_text.trim().length > 0) {
+              openEndedResponses.push(`[질문: ${q.question_text}] 답변: ${a.answer_text}`);
+            }
+          });
+        }
+      });
+
+      if (openEndedResponses.length === 0) {
+        toast({
+          title: "분석할 데이터 없음",
+          description: "주관식 서술형 응답이 없어 AI 분석을 진행할 수 없습니다.",
+          variant: "destructive",
+        });
+        setIsAnalyzing(false);
+        return;
+      }
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      const prompt = `
+        다음은 교육 과정 설문조사의 주관식 피드백 데이터입니다.
+        이 데이터를 분석하여 강사나 운영진에게 도움이 될 핵심 내용을 JSON 형식으로 요약해주세요.
+        
+        **데이터:**
+        ${openEndedResponses.slice(0, 500).join('\n')} (일부 데이터만 전송됨)
+
+        **요구사항:**
+        1. summary: 전체적인 피드백을 3문장 내외로 요약 (한국어 존댓말)
+        2. positiveKeywords: 긍정적으로 평가된 주요 키워드나 문구 3가지 (단어 또는 짧은 구)
+        3. improvements: 개선이 필요하다고 언급된 구체적인 사항 3가지 (구체적으로 작성)
+        4. sentiment: 전체적인 분위기 ('Positive', 'Neutral', 'Negative' 중 하나)
+
+        **JSON 응답 형식 (반드시 이 형식만 출력, 마크다운 코드블럭 없이):**
+        {
+          "summary": "...",
+          "positiveKeywords": ["...", ...],
+          "improvements": ["...", ...],
+          "sentiment": "..."
+        }
+      `;
+
+      const result = await model.generateContent(prompt);
+      const responseText = result.response.text();
+
+      // Remove markdown code blocks if present
+      const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+
+      const analysisData: AIAnalysisResult = JSON.parse(cleanedText);
+      setAiAnalysisResult(analysisData);
+
+      toast({
+        title: "AI 분석 완료",
+        description: "설문 피드백 분석이 완료되었습니다.",
+      });
+
+    } catch (e: any) {
+      console.error("Gemini API Error:", e);
+      toast({
+        title: "분석 실패",
+        description: "AI 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [instructor, setInstructor] = useState<Instructor | null>(null);
@@ -916,6 +1018,17 @@ const SurveyDetailedAnalysis = () => {
             <span className="hidden sm:inline">CSV 다운로드</span>
             <span className="sm:hidden">다운로드</span>
           </Button>
+
+          <Button
+            variant="outline"
+            onClick={handleAnalyzeAI}
+            disabled={isAnalyzing}
+            className="flex-1 sm:flex-none bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border-indigo-200 hover:bg-indigo-50 text-indigo-700"
+          >
+            {isAnalyzing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Wand2 className="h-4 w-4 mr-2" />}
+            <span className="hidden sm:inline">AI 요약 분석</span>
+            <span className="sm:hidden">AI 분석</span>
+          </Button>
           <Button onClick={handleSendResults} className="flex-1 sm:flex-none">
             <Mail className="h-4 w-4 mr-2" />
             <span className="hidden sm:inline">결과 전송</span>
@@ -1040,6 +1153,63 @@ const SurveyDetailedAnalysis = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* AI 분석 결과 표시 */}
+          {aiAnalysisResult && (
+            <Card className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 border-indigo-100 shadow-sm animate-fade-in print:break-inside-avoid">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <Wand2 className="h-5 w-5 text-indigo-600" />
+                  <CardTitle className="text-lg text-indigo-900">AI 피드백 분석 리포트</CardTitle>
+                  <Badge variant={
+                    aiAnalysisResult.sentiment === 'Positive' ? 'default' :
+                      aiAnalysisResult.sentiment === 'Negative' ? 'destructive' : 'secondary'
+                  } className="ml-auto">
+                    {aiAnalysisResult.sentiment === 'Positive' ? '긍정적 😊' :
+                      aiAnalysisResult.sentiment === 'Negative' ? '부정적 😟' : '중립적 😐'}
+                  </Badge>
+                </div>
+                <CardDescription>Gemini AI가 주관식 응답을 분석한 결과입니다.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 bg-white/60 rounded-lg border border-indigo-100">
+                  <h4 className="flex items-center gap-2 font-semibold text-indigo-900 mb-2">
+                    <MessageSquareQuote className="h-4 w-4" />
+                    3줄 요약
+                  </h4>
+                  <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+                    {aiAnalysisResult.summary}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-green-50/50 rounded-lg border border-green-100">
+                    <h4 className="flex items-center gap-2 font-semibold text-green-700 mb-2">
+                      <ThumbsUp className="h-4 w-4" />
+                      긍정 포인트
+                    </h4>
+                    <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+                      {aiAnalysisResult.positiveKeywords.map((k, i) => (
+                        <li key={i}>{k}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="p-4 bg-red-50/50 rounded-lg border border-red-100">
+                    <h4 className="flex items-center gap-2 font-semibold text-red-700 mb-2">
+                      <ThumbsDown className="h-4 w-4" />
+                      개선 필요 사항
+                    </h4>
+                    <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+                      {aiAnalysisResult.improvements.map((k, i) => (
+                        <li key={i}>{k}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* 평점별 분석 */}
           {ratingAnalysis.length > 0 && (
