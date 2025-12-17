@@ -53,6 +53,7 @@ export function AdminSidebar() {
     icon: LucideIcon;
     exact: boolean;
     badge?: string;
+    variant?: "default" | "developer";
   };
 
   type MenuSection = {
@@ -78,8 +79,8 @@ export function AdminSidebar() {
         {
           title: "조직 분석",
           items: [
-            { title: "결과분석", url: "/dashboard/results", icon: BarChart3, exact: false },
-            { title: "과정별 결과 보고", url: "/dashboard/course-reports", icon: TrendingUp, exact: false },
+            { title: "설문 응답 상세", url: "/dashboard/results", icon: BarChart3, exact: false },
+            { title: "과정별 리포트", url: "/dashboard/course-reports", icon: TrendingUp, exact: false },
             { title: "과정 전체 통계", url: "/dashboard/course-statistics", icon: PieChart, exact: false },
             { title: "누적 데이터", url: "/dashboard/cumulative-data", icon: Database, exact: false }
           ]
@@ -104,6 +105,15 @@ export function AdminSidebar() {
           ]
         }
       );
+
+      if (isDeveloper || isAdmin) {
+        sections.push({
+          title: "개발자 도구",
+          items: [
+            { title: "테스트 화면", url: "/developer-test", icon: Code, exact: true, variant: "developer" } // variant prop usage needs checking if supported by Menu item type
+          ]
+        });
+      }
     }
 
     // 강사 역할이 있으면 "나의 분석" 섹션 추가
@@ -113,7 +123,7 @@ export function AdminSidebar() {
         items: [
           { title: "나의 만족도 통계", url: "/dashboard/my-stats", icon: Award, exact: false, badge: "내 데이터만" },
           { title: "과정별 내 결과", url: "/dashboard/results", icon: TrendingUp, exact: false, badge: "강사만" },
-          { title: "과정 전체 통계", url: "/dashboard/course-statistics", icon: PieChart, exact: false, badge: "요약만" }
+          { title: "전체 평균 비교", url: "/dashboard/course-statistics", icon: PieChart, exact: false, badge: "요약만" }
         ]
       });
     }

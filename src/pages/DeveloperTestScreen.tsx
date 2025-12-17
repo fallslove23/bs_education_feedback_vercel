@@ -15,11 +15,11 @@ const DeveloperTestScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedRole, setSelectedRole] = useState<string>('');
-  const [instructors, setInstructors] = useState<Array<{id: string, name: string, email: string}>>([]);
+  const [instructors, setInstructors] = useState<Array<{ id: string, name: string, email: string }>>([]);
   const [selectedInstructor, setSelectedInstructor] = useState<string>('');
 
-  // 개발자 계정인지 확인
-  const isDeveloper = user?.email === 'sethetrend87@osstem.com';
+  // 개발자 계정 또는 관리자 권한 확인
+  const isDeveloper = user?.email === 'sethetrend87@osstem.com' || userRoles.includes('admin');
 
   // 강사 목록 로드
   useEffect(() => {
@@ -28,12 +28,12 @@ const DeveloperTestScreen = () => {
         .from('instructors')
         .select('id, name, email')
         .order('name');
-      
+
       if (error) {
         console.error('강사 목록 로드 오류:', error);
         return;
       }
-      
+
       setInstructors(data || []);
     };
 
@@ -137,8 +137,8 @@ const DeveloperTestScreen = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => navigate('/dashboard')}
               className="flex items-center gap-2"
             >
@@ -192,7 +192,7 @@ const DeveloperTestScreen = () => {
               <p className="text-muted-foreground">
                 강사별 페이지를 미리보기하여 오류사항을 확인할 수 있습니다.
               </p>
-              
+
               <div className="space-y-3">
                 <div>
                   <label className="text-sm font-medium">강사 선택:</label>
@@ -209,7 +209,7 @@ const DeveloperTestScreen = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="flex gap-4">
                   <Button
                     onClick={() => {
@@ -262,8 +262,8 @@ const DeveloperTestScreen = () => {
             <Tabs defaultValue="admin" className="w-full">
               <TabsList className="grid w-full grid-cols-4">
                 {roleScreens.map((roleData) => (
-                  <TabsTrigger 
-                    key={roleData.role} 
+                  <TabsTrigger
+                    key={roleData.role}
                     value={roleData.role}
                     className="flex items-center gap-2"
                   >
