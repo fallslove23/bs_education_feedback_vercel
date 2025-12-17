@@ -715,18 +715,32 @@ const handler = async (req: Request): Promise<Response> => {
     const sentEmails = new Set<string>(); // 중복 발송 방지
     const recipientDetails: any[] = []; // 수신자 상세 정보 (로그용)
 
+    // --------------------------------------------------------------------------
+    // Refactored: 2-Phase Sending (Prepare -> Execute)
+    // --------------------------------------------------------------------------
+
+    const fromAddress = Deno.env.get("RESEND_FROM_ADDRESS") || "onboarding@resend.dev";
+    const replyTo = Deno.env.get("RESEND_REPLY_TO") || undefined;
+
+    interface EmailJob {
+      email: string;
+      role: string | null;
+      dataScope: string;
+      instructorId: string | null;
+    }
+
+    const emailJobs: EmailJob[] = [];
+
+    // Phase 1: Prepare Jobs (Resolve recipients, Roles, Dedupe, Skip Check)
     for (const emailRaw of recipients) {
       const email = String(emailRaw).toLowerCase();
-
-      // 역할인 경우 해당 역할의 모든 사용자 이메일로 확장 (admin 제외)
       let targetEmails: string[] = [];
+
+      // A. Resolve Roles to Emails
       if (['director', 'manager', 'instructor'].includes(email)) {
         if (email === 'instructor') {
-          // 강사의 경우 이 설문에 연결된 강사의 이메일만
           targetEmails = allInstructors.map((inst: any) => inst.email).filter(Boolean);
         } else {
-          // 다른 역할들은 기존 로직대로
-          // 1단계: user_roles에서 해당 역할의 user_id 가져오기
           const { data: userRoles } = await supabase
             .from('user_roles')
             .select('user_id')
@@ -734,8 +748,6 @@ const handler = async (req: Request): Promise<Response> => {
 
           if (userRoles && userRoles.length > 0) {
             const userIds = userRoles.map((ur: any) => ur.user_id);
-
-            // 2단계: profiles에서 해당 user_id들의 이메일 가져오기
             const { data: profiles } = await supabase
               .from('profiles')
               .select('email')
@@ -751,11 +763,11 @@ const handler = async (req: Request): Promise<Response> => {
         targetEmails = [email];
       }
 
-      // 각 이메일에 발송 (중복 제거 및 rate limiting 적용)
+      // B. Create Jobs for Valid Targets
       for (const targetEmail of targetEmails) {
         const emailLower = targetEmail.toLowerCase();
 
-        // 이미 발송한 이메일은 건너뛰기
+        // Deduplication
         if (sentEmails.has(emailLower)) {
           console.log(`[DUPLICATE BLOCKED] Skipping duplicate email to ${targetEmail}`);
           recipientDetails.push({
@@ -768,22 +780,19 @@ const handler = async (req: Request): Promise<Response> => {
         }
         sentEmails.add(emailLower);
 
-        const userRole = emailToRole.get(emailLower);
-
-        // director와 manager는 전체 결과, instructor는 본인 결과만 (admin은 발송 대상에서 제외됨)
+        const userRole = emailToRole.get(emailLower) || null;
         let instructorId: string | null = null;
-        let dataScope = 'full'; // 'full' 또는 'filtered'
+        let dataScope = 'full';
+
         if (userRole === 'director' || userRole === 'manager') {
-          // 조직장과 운영자는 전체 결과
           instructorId = null;
           dataScope = 'full';
         } else {
-          // 강사 또는 다른 역할은 본인 결과만
           instructorId = emailToInstructorId.get(emailLower) || null;
           dataScope = 'filtered';
         }
 
-        // 강사 필터링된 경우, 해당 강사의 응답 수 확인
+        // Skip if instructor has no responses
         if (instructorId) {
           const instructorSessionIds = Array.from(sessionIdToInstructorId.entries())
             .filter(([_, iid]) => iid === instructorId)
@@ -793,9 +802,8 @@ const handler = async (req: Request): Promise<Response> => {
             (r: any) => r.session_id && instructorSessionIds.includes(r.session_id)
           ).length;
 
-          // 해당 강사의 응답이 0건이면 발송하지 않음
           if (instructorResponseCount === 0) {
-            console.log(`[SKIP] ${targetEmail}: No responses for instructor ${instructorId} (0 out of ${responses.length} total responses)`);
+            console.log(`[SKIP] ${targetEmail}: No responses for instructor ${instructorId}`);
             recipientDetails.push({
               email: targetEmail,
               role: userRole || 'instructor',
@@ -808,77 +816,58 @@ const handler = async (req: Request): Promise<Response> => {
           }
         }
 
-        const content = buildContent(instructorId);
+        emailJobs.push({
+          email: targetEmail,
+          role: userRole,
+          dataScope,
+          instructorId
+        });
+      }
+    }
 
-        const fromAddress = Deno.env.get("RESEND_FROM_ADDRESS") || "onboarding@resend.dev";
-        const replyTo = Deno.env.get("RESEND_REPLY_TO") || undefined;
+    // Phase 2: Execute Jobs in Chunks (Performance Optimization)
+    // Send 5 emails concurrently, then wait 1s.
+    const CHUNK_SIZE = 5;
 
+    console.log(`[JOB START] Processing ${emailJobs.length} emails in chunks of ${CHUNK_SIZE}...`);
+
+    for (let i = 0; i < emailJobs.length; i += CHUNK_SIZE) {
+      const chunk = emailJobs.slice(i, i + CHUNK_SIZE);
+
+      await Promise.all(chunk.map(async (job) => {
         try {
-          console.log(`[SENDING] ${targetEmail} (role: ${userRole || 'unknown'}, scope: ${dataScope}, instructorId: ${instructorId || 'none'})`);
+          const content = buildContent(job.instructorId);
+          console.log(`[SENDING] ${job.email} (scope: ${job.dataScope})`);
+
           const sendRes: any = await resend.emails.send({
             from: fromAddress,
-            to: [targetEmail],
+            to: [job.email],
             reply_to: replyTo,
             subject: content.subject,
             html: content.html,
           });
 
           if (sendRes?.error) {
-            console.error(`[FAILED] ${targetEmail}:`, sendRes.error);
-            results.push({
-              to: targetEmail,
-              status: "failed",
-              error: sendRes.error.message || String(sendRes.error),
-              role: userRole,
-              dataScope
-            });
-            recipientDetails.push({
-              email: targetEmail,
-              role: userRole || 'unknown',
-              dataScope,
-              instructorId: instructorId || null,
-              status: 'failed',
-              error: sendRes.error.message || String(sendRes.error)
-            });
+            console.error(`[FAILED] ${job.email}:`, sendRes.error);
+            const errMsg = sendRes.error.message || String(sendRes.error);
+            results.push({ to: job.email, status: "failed", error: errMsg, role: job.role, dataScope: job.dataScope });
+            recipientDetails.push({ email: job.email, role: job.role || 'unknown', dataScope: job.dataScope, instructorId: job.instructorId, status: 'failed', error: errMsg });
           } else {
-            console.log(`[SUCCESS] ${targetEmail}, ID: ${sendRes?.id}`);
-            results.push({
-              to: targetEmail,
-              status: "sent",
-              emailId: sendRes?.id,
-              role: userRole,
-              dataScope
-            });
-            recipientDetails.push({
-              email: targetEmail,
-              role: userRole || 'unknown',
-              dataScope,
-              instructorId: instructorId || null,
-              status: 'sent',
-              emailId: sendRes?.id
-            });
+            console.log(`[SUCCESS] ${job.email}, ID: ${sendRes?.id}`);
+            results.push({ to: job.email, status: "sent", emailId: sendRes?.id, role: job.role, dataScope: job.dataScope });
+            recipientDetails.push({ email: job.email, role: job.role || 'unknown', dataScope: job.dataScope, instructorId: job.instructorId, status: 'sent', emailId: sendRes?.id });
           }
-
-          // Rate limiting: 초당 2개 제한을 지키기 위해 600ms 대기 (여유있게)
-          await new Promise(resolve => setTimeout(resolve, 600));
-        } catch (emailErr: any) {
-          console.error(`[EXCEPTION] ${targetEmail}:`, emailErr);
-          results.push({
-            to: targetEmail,
-            status: "failed",
-            error: emailErr?.message || String(emailErr),
-            role: userRole,
-            dataScope
-          });
-          recipientDetails.push({
-            email: targetEmail,
-            role: userRole || 'unknown',
-            dataScope,
-            instructorId: instructorId || null,
-            status: 'failed',
-            error: emailErr?.message || String(emailErr)
-          });
+        } catch (err: any) {
+          console.error(`[EXCEPTION] ${job.email}:`, err);
+          const errMsg = err?.message || String(err);
+          results.push({ to: job.email, status: "failed", error: errMsg, role: job.role, dataScope: job.dataScope });
+          recipientDetails.push({ email: job.email, role: job.role || 'unknown', dataScope: job.dataScope, instructorId: job.instructorId, status: 'failed', error: errMsg });
         }
+      }));
+
+      // Rate limiting wait between chunks (only if there are more chunks)
+      if (i + CHUNK_SIZE < emailJobs.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
 
