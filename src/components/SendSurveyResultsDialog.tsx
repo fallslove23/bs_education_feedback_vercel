@@ -319,104 +319,32 @@ export const SendSurveyResultsDialog = ({
     }
   };
 
-  /* New logic: Generate preview locally to avoid Edge Function deployment issues */
   const generatePreview = async () => {
     try {
       setLoading(true);
+      console.log('Generating preview via Edge Function for survey:', surveyId);
 
-      console.log('Generating preview locally for survey:', surveyId);
+      const allRecipients = [...selectedRoles, ...additionalEmails];
+      const requestBody = {
+        surveyId,
+        recipients: allRecipients,
+        previewOnly: true,
+        targetInstructorIds: selectedInstructorId !== 'all' ? [selectedInstructorId] : undefined
+      };
 
-      // 1. Fetch Survey Info
-      const { data: surveyData, error: surveyErr } = await supabase
-        .from('surveys')
-        .select('*')
-        .eq('id', surveyId)
-        .single();
-
-      if (surveyErr) throw surveyErr;
-
-      // 2. Fetch Sessions & Instructor mapping
-      const { data: sessions, error: sessErr } = await supabase
-        .from('survey_sessions')
-        .select(`id, session_name, instructor_id, instructors (id, name, email)`)
-        .eq('survey_id', surveyId);
-
-      if (sessErr) throw sessErr;
-
-      // 3. Fetch all Instructors (for top summary)
-      const { data: surveyInstructors, error: instErr } = await supabase
-        .from('survey_instructors')
-        .select(`instructor_id, instructors (id, name, email)`)
-        .eq('survey_id', surveyId);
-
-      // Merge unique instructors
-      const instructors = new Map();
-      sessions?.forEach((s: any) => {
-        if (s.instructors) instructors.set(s.instructors.id, s.instructors);
-      });
-      surveyInstructors?.forEach((si: any) => {
-        if (si.instructors) instructors.set(si.instructors.id, si.instructors);
+      const { data, error } = await supabase.functions.invoke('send-survey-results', {
+        body: requestBody,
       });
 
-      // 4. Fetch Questions
-      const { data: questions, error: qErr } = await supabase
-        .from('survey_questions')
-        .select('*')
-        .eq('survey_id', surveyId)
-        .order('order_index');
-
-      if (qErr) throw qErr;
-
-      // 5. Fetch ALL Responses
-      const { data: responses, error: rErr } = await supabase
-        .from('survey_responses')
-        .select('id, session_id')
-        .eq('survey_id', surveyId)
-        .eq('is_test', false);
-
-      if (rErr) throw rErr;
-
-      const responseIds = responses?.map(r => r.id) || [];
-      const totalRespondents = responseIds.length;
-
-      if (totalRespondents === 0) {
-        throw new Error("응답이 없어 미리보기를 생성할 수 없습니다.");
-      }
-
-      // 6. Fetch Answers
-      const { data: answers, error: aErr } = await supabase
-        .from('question_answers')
-        .select('question_id, answer_value, answer_text')
-        .in('response_id', responseIds);
-
-      if (aErr) throw aErr;
-
-      // 7. Calculate Stats
-      const { calculateSurveyStats, generateSurveyEmailContent } = await import('@/utils/surveyEmailInfos');
-
-      const questionStats = calculateSurveyStats(questions || [], answers || [], sessions || [], surveyInstructors || []);
-      const instructorList = Array.from(instructors.values());
-
-      // 8. Generate Content
-      const content = generateSurveyEmailContent(
-        {
-          title: surveyData.title,
-          course_name: surveyData.course_name,
-          education_year: surveyData.education_year,
-          education_round: surveyData.education_round
-        },
-        questionStats,
-        instructorList,
-        totalRespondents
-      );
-
-      const resolvedRecipients = [...selectedRoles, ...additionalEmails];
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || '미리보기 생성 실패');
 
       setEmailPreview({
-        subject: content.subject,
-        htmlContent: content.html,
-        textContent: content.text,
-        recipients: resolvedRecipients
+        subject: data.subject,
+        htmlContent: data.htmlContent,
+        textContent: data.htmlContent.replace(/<[^>]*>/g, ''), // Simple fallback
+        recipients: data.recipients,
+        previewNote: data.previewNote
       });
 
       setStep(2);

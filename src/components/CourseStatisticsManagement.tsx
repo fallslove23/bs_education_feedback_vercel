@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,26 +11,8 @@ import { Upload, Plus, Edit, Trash2, FileSpreadsheet, Wand2, AlertCircle, CheckC
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import * as XLSX from 'xlsx';
-
-interface CourseStatistic {
-  id?: string;
-  year: number;
-  round: number;
-  course_name: string;
-  course_start_date: string;
-  course_end_date: string;
-  course_days: number;
-  status: string;
-  enrolled_count: number;
-  cumulative_count: number;
-  education_days?: number;
-  education_hours?: number;
-  total_satisfaction?: number;
-  course_satisfaction?: number;
-  instructor_satisfaction?: number;
-  operation_satisfaction?: number;
-}
+import { parseCourseStatisticsExcel, CourseStatistic } from '@/utils/excelParser';
+import { CourseStatsService } from '@/services/courseStatsService';
 
 const CourseStatisticsManagement = () => {
   const [statistics, setStatistics] = useState<CourseStatistic[]>([]);
@@ -53,14 +35,6 @@ const CourseStatisticsManagement = () => {
   const years = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
   const statusOptions = ['완료', '진행 중', '진행 예정', '취소'];
   const statusSet = new Set(statusOptions);
-
-  const parseNumericField = (value: any): number | null => {
-    if (value === null || value === undefined) return null;
-    const normalized = typeof value === 'string' ? value.trim() : value;
-    if (normalized === '') return null;
-    const parsed = Number(normalized);
-    return Number.isFinite(parsed) ? parsed : null;
-  };
 
   // 필터링된 통계에서 사용 가능한 차수 추출
   const availableRounds = [...new Set(allStatistics.filter(stat => stat.year === selectedYear).map(stat => stat.round))].sort((a, b) => a - b);
@@ -245,11 +219,10 @@ const CourseStatisticsManagement = () => {
     }
   };
 
-  const handleExcelUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleExcelUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // 파일 확장자 검증
     const fileName = file.name.toLowerCase();
     if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
       setUploadStatus({
@@ -260,151 +233,41 @@ const CourseStatisticsManagement = () => {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        setLoading(true);
-        setUploadStatus({ type: null, message: '' });
+    try {
+      setLoading(true);
+      setUploadStatus({ type: null, message: '' });
 
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
+      const statisticsToUpload = await parseCourseStatisticsExcel(file);
 
-        if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-          throw new Error('Excel 파일에 시트가 없습니다.');
-        }
-
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-        if (!jsonData || jsonData.length === 0) {
-          throw new Error('Excel 파일에 데이터가 없습니다.');
-        }
-
-        console.log('Excel data preview:', jsonData.slice(0, 2));
-
-        const statisticsToUpload: CourseStatistic[] = [];
-        const errors: string[] = [];
-
-        jsonData.forEach((row: any, index: number) => {
-          try {
-            // 필수 필드 검증
-            const year = parseInt(row['연도'] || row['year']) || null;
-            const round = parseInt(row['차수'] || row['round']) || null;
-            const courseName = (row['과정명'] || row['course_name'] || '').toString().trim();
-
-            if (!courseName) {
-              errors.push(`${index + 2}번째 행: 연도, 차수, 과정명은 필수입니다.`);
-              return;
-            }
-
-            if (statusSet.has(courseName)) {
-              errors.push(`${index + 2}번째 행: 과정명에 완료/진행 상태 텍스트가 입력되었습니다.`);
-              return;
-            }
-
-            if (!year || !round) {
-              errors.push(`${index + 2}번째 행: 연도, 차수, 과정명은 필수입니다.`);
-              return;
-            }
-
-            const statusValue = (row['상태'] || row['status'] || '완료').toString().trim();
-            const normalizedStatus = statusSet.has(statusValue) ? statusValue : '완료';
-
-            const statistic: CourseStatistic = {
-              year,
-              round,
-              course_name: courseName,
-              course_start_date: formatDate(row['과정시작일'] || row['course_start_date']),
-              course_end_date: formatDate(row['과정종료일'] || row['course_end_date']),
-              course_days: parseInt(row['과정일수'] || row['course_days']) || 1,
-              status: normalizedStatus,
-              enrolled_count: parseInt(row['수강인원'] || row['enrolled_count']) || 0,
-              cumulative_count: parseInt(row['누적인원'] || row['cumulative_count']) || 0,
-              education_days: parseNumericField(row['교육일수'] ?? row['education_days']) ?? null,
-              education_hours: parseNumericField(row['교육시간'] ?? row['education_hours']) ?? null,
-              total_satisfaction: parseNumericField(row['종합만족도'] ?? row['total_satisfaction']),
-              course_satisfaction: parseNumericField(row['과정만족도'] ?? row['course_satisfaction']),
-              instructor_satisfaction: parseNumericField(row['강사만족도'] ?? row['instructor_satisfaction']),
-              operation_satisfaction: parseNumericField(row['운영만족도'] ?? row['operation_satisfaction']),
-            };
-
-            statisticsToUpload.push(statistic);
-          } catch (rowError) {
-            console.error(`Row ${index + 2} error:`, rowError);
-            errors.push(`${index + 2}번째 행: 데이터 형식 오류`);
-          }
+      const { error } = await supabase
+        .from('course_statistics')
+        .upsert(statisticsToUpload, {
+          onConflict: 'year,round,course_name',
+          ignoreDuplicates: false
         });
 
-        if (errors.length > 0) {
-          throw new Error(`데이터 오류:\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? '\n...' : ''}`);
-        }
-
-        if (statisticsToUpload.length === 0) {
-          throw new Error('업로드할 유효한 데이터가 없습니다.');
-        }
-
-        const { error } = await supabase
-          .from('course_statistics')
-          .upsert(statisticsToUpload, {
-            onConflict: 'year,round,course_name',
-            ignoreDuplicates: false
-          });
-
-        if (error) {
-          console.error('Supabase error:', error);
-          throw new Error(`데이터베이스 저장 오류: ${error.message}`);
-        }
-
-        setUploadStatus({
-          type: 'success',
-          message: `${statisticsToUpload.length}개의 통계 데이터가 성공적으로 업로드되었습니다.`
-        });
-
-        setIsUploadDialogOpen(false);
-        fetchAllStatistics();
-      } catch (error: any) {
-        console.error('Error uploading Excel:', error);
-        setUploadStatus({
-          type: 'error',
-          message: error.message || 'Excel 파일 업로드 중 오류가 발생했습니다.'
-        });
-      } finally {
-        setLoading(false);
-        // Reset file input
-        event.target.value = '';
+      if (error) {
+        console.error('Supabase error:', error);
+        throw new Error(`데이터베이스 저장 오류: ${error.message}`);
       }
-    };
 
-    reader.onerror = () => {
+      setUploadStatus({
+        type: 'success',
+        message: `${statisticsToUpload.length}개의 통계 데이터가 성공적으로 업로드되었습니다.`
+      });
+
+      setIsUploadDialogOpen(false);
+      fetchAllStatistics();
+    } catch (error: any) {
+      console.error('Error uploading Excel:', error);
       setUploadStatus({
         type: 'error',
-        message: '파일을 읽는 중 오류가 발생했습니다.'
+        message: error.message || 'Excel 파일 업로드 중 오류가 발생했습니다.'
       });
+    } finally {
       setLoading(false);
       event.target.value = '';
-    };
-
-    reader.readAsArrayBuffer(file);
-  };
-
-  const formatDate = (dateValue: any): string => {
-    if (!dateValue) return '';
-
-    // Excel 날짜 숫자인 경우
-    if (typeof dateValue === 'number') {
-      const date = XLSX.SSF.parse_date_code(dateValue);
-      return `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
     }
-
-    // 이미 문자열인 경우
-    if (typeof dateValue === 'string') {
-      const date = new Date(dateValue);
-      if (!isNaN(date.getTime())) {
-        return date.toISOString().split('T')[0];
-      }
-    }
-
-    return dateValue.toString();
   };
 
   const generateFromSurveys = async () => {
@@ -421,161 +284,20 @@ const CourseStatisticsManagement = () => {
 
     try {
       setLoading(true);
+      const { count } = await CourseStatsService.generateFromSurveys(selectedYear);
 
-      // 해당 년도의 완료된 설문 데이터 가져오기
-      const { data: surveys, error: surveyError } = await supabase
-        .from('surveys')
-        .select(`
-          education_year,
-          education_round,
-          education_day,
-          course_name,
-          start_date,
-          end_date,
-          status,
-          expected_participants,
-          is_test,
-          survey_responses (
-            id,
-            is_test,
-            question_answers (
-              answer_value,
-              survey_questions (satisfaction_type, question_type)
-            )
-          )
-        `)
-        .eq('education_year', selectedYear)
-        .in('status', ['completed', 'active', 'public'])
-        .or('is_test.is.null,is_test.eq.false');
-
-      if (surveyError) throw surveyError;
-
-      if (!surveys || surveys.length === 0) {
-        toast({
-          title: "알림",
-          description: `${selectedYear}년도에 생성할 설문 결과가 없습니다.`,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // 설문별로 통계 계산
-      const generatedStats = new Map<string, CourseStatistic>();
-
-      const statusLabelMap: Record<string, string> = {
-        completed: '완료',
-        active: '진행 중',
-        public: '진행 중',
-      };
-
-      surveys
-        ?.filter(survey => !survey.is_test)
-        .forEach(survey => {
-          const key = `${survey.education_year}-${survey.education_round}-${survey.course_name}`;
-          const validResponses = (survey.survey_responses || []).filter(response => !response.is_test);
-          const statusKey = typeof survey.status === 'string' ? survey.status : 'completed';
-          const statusLabel = statusLabelMap[statusKey] || '완료';
-          const round = typeof survey.education_round === 'number'
-            ? survey.education_round
-            : Number(survey.education_round) || 1;
-          const educationDay = typeof survey.education_day === 'number'
-            ? survey.education_day
-            : Number(survey.education_day) || null;
-          const responseCount = validResponses.length;
-          const expectedParticipants = typeof survey.expected_participants === 'number'
-            ? survey.expected_participants
-            : Number(survey.expected_participants) || 0;
-
-          if (!generatedStats.has(key)) {
-            generatedStats.set(key, {
-              year: survey.education_year ?? selectedYear,
-              round,
-              course_name: survey.course_name || '',
-              course_start_date: survey.start_date ? new Date(survey.start_date).toISOString().split('T')[0] : '',
-              course_end_date: survey.end_date ? new Date(survey.end_date).toISOString().split('T')[0] : '',
-              course_days: educationDay || 1,
-              status: statusLabel,
-              enrolled_count: responseCount || expectedParticipants,
-              cumulative_count: responseCount || expectedParticipants,
-              education_days: educationDay,
-              education_hours: null,
-              total_satisfaction: null,
-              course_satisfaction: null,
-              instructor_satisfaction: null,
-              operation_satisfaction: null,
-            });
-          }
-
-          const stat = generatedStats.get(key)!;
-          if (educationDay) {
-            stat.course_days = educationDay;
-            stat.education_days = educationDay;
-          }
-          stat.status = statusLabel;
-
-          // 만족도 계산
-          let instructorScores: number[] = [];
-          let courseScores: number[] = [];
-          let operationScores: number[] = [];
-
-          validResponses.forEach(response => {
-            response.question_answers?.forEach(answer => {
-              if (answer.survey_questions?.question_type === 'scale' && answer.answer_value) {
-                let score = typeof answer.answer_value === 'number' ? answer.answer_value : Number(answer.answer_value);
-                if (score <= 5 && score > 0) score = score * 2; // 5점 척도를 10점으로 변환
-
-                if (answer.survey_questions.satisfaction_type === 'instructor') {
-                  instructorScores.push(score);
-                } else if (answer.survey_questions.satisfaction_type === 'course') {
-                  courseScores.push(score);
-                } else if (answer.survey_questions.satisfaction_type === 'operation') {
-                  operationScores.push(score);
-                }
-              }
-            });
-          });
-
-          if (responseCount > 0) {
-            stat.enrolled_count = responseCount;
-            const currentCumulative = typeof stat.cumulative_count === 'number' ? stat.cumulative_count : 0;
-            stat.cumulative_count = Math.max(currentCumulative, responseCount);
-          } else if (!stat.enrolled_count) {
-            stat.enrolled_count = expectedParticipants;
-            if (!stat.cumulative_count) {
-              stat.cumulative_count = expectedParticipants;
-            }
-          }
-
-          // 평균 계산
-          stat.instructor_satisfaction = instructorScores.length > 0 ?
-            Number((instructorScores.reduce((a, b) => a + b, 0) / instructorScores.length).toFixed(2)) : null;
-          stat.course_satisfaction = courseScores.length > 0 ?
-            Number((courseScores.reduce((a, b) => a + b, 0) / courseScores.length).toFixed(2)) : null;
-          stat.operation_satisfaction = operationScores.length > 0 ?
-            Number((operationScores.reduce((a, b) => a + b, 0) / operationScores.length).toFixed(2)) : null;
-
-          // 종합 만족도
-          const validScores = [stat.instructor_satisfaction, stat.course_satisfaction, stat.operation_satisfaction]
-            .filter(score => score !== null) as number[];
-          stat.total_satisfaction = validScores.length > 0 ?
-            Number((validScores.reduce((a, b) => a + b, 0) / validScores.length).toFixed(2)) : null;
-        });
-
-      const statsArray = Array.from(generatedStats.values());
-
-      if (statsArray.length > 0) {
-        const { error } = await supabase
-          .from('course_statistics')
-          .upsert(statsArray, { onConflict: 'year,round,course_name' });
-
-        if (error) throw error;
-
+      if (count > 0) {
         toast({
           title: "성공",
-          description: `${statsArray.length}개의 통계가 자동 생성되었습니다.`
+          description: `${count}개의 통계가 자동 생성되었습니다.`
         });
-
         fetchAllStatistics();
+      } else {
+        toast({
+          title: "알림",
+          description: `${selectedYear}년도에 생성할 설문 데이터가 없습니다.`,
+          variant: "destructive"
+        });
       }
 
     } catch (error) {
@@ -663,7 +385,6 @@ const CourseStatisticsManagement = () => {
       <Card>
 
         <CardContent className="space-y-4">
-          {/* 필터 섹션 */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 bg-muted/20 rounded-lg">
             <div className="flex items-center gap-2 mb-2 sm:mb-0">
               <Filter className="h-4 w-4 text-muted-foreground" />
@@ -715,7 +436,6 @@ const CourseStatisticsManagement = () => {
               </div>
             </div>
           </div>
-          {/* 테이블 섹션 */}
           {loading ? (
             <div className="flex justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -792,7 +512,6 @@ const CourseStatisticsManagement = () => {
         </CardContent>
       </Card>
 
-      {/* Excel 업로드 다이얼로그 */}
       <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>

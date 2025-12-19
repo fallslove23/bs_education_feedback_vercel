@@ -123,20 +123,22 @@ export const useCourseReportsData = (
         try {
           // 같은 프로그램의 이전 턴 세션 찾기
           const currentProgramName = current.summary.programName;
-          const availableSessions = current.availableSessions || [];
-          
+          const availableSessions = (current.availableSessions && current.availableSessions.length > 0)
+            ? current.availableSessions
+            : fallbackSessions;
+
           // 현재 회차 정보
           const currentRound = current.summary.educationRound;
-          
+
           if (currentRound !== null && currentProgramName) {
             // 같은 프로그램의 이전 턴 찾기 (턴이 현재보다 작고 가장 큰 것)
             const previousSession = availableSessions
-              .filter(s => 
-                s.programName === currentProgramName && 
+              .filter(s =>
+                s.programName === currentProgramName &&
                 s.turn < currentRound
               )
               .sort((a, b) => b.turn - a.turn)[0];
-            
+
             if (previousSession) {
               console.log('🔍 Fetching previous session data:', {
                 currentProgram: currentProgramName,
@@ -145,7 +147,7 @@ export const useCourseReportsData = (
                 previousTurn: previousSession.turn,
                 previousSessionTitle: previousSession.sessionTitle
               });
-              
+
               const previous = await CourseReportsRepositoryFixed.fetchStatistics({
                 year: selectedYear,
                 sessionId: previousSession.sessionId,  // 이전 턴의 세션 ID 사용
@@ -153,7 +155,7 @@ export const useCourseReportsData = (
                 instructorId: instructorFilter,
                 includeTestData,
               });
-              
+
               console.log('📊 Previous data fetched:', {
                 hasSummary: !!previous?.summary,
                 instructorStatsCount: previous?.instructorStats?.length ?? 0
@@ -195,6 +197,7 @@ export const useCourseReportsData = (
     selectedRound,
     selectedYear,
     toast,
+    fallbackSessions,
   ]);
 
   useEffect(() => {

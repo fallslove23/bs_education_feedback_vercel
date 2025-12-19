@@ -1,4 +1,5 @@
 import React from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, BarChart3, TrendingUp } from 'lucide-react';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -10,6 +11,12 @@ interface InstructorStats {
   survey_count: number;
   response_count: number;
   avg_satisfaction: number;
+  // Support camelCase for flexibility
+  instructorId?: string;
+  instructorName?: string;
+  surveyCount?: number;
+  responseCount?: number;
+  avgSatisfaction?: number;
 }
 
 interface InstructorStatsSectionProps {
@@ -25,6 +32,8 @@ const InstructorStatsSection: React.FC<InstructorStatsSectionProps> = ({
   comparisonLabel = '이전 기간',
   onInstructorClick
 }) => {
+  const isMobile = useIsMobile();
+
   console.log('📊 InstructorStatsSection props:', {
     instructorStatsCount: instructorStats.length,
     previousStatsCount: previousStats.length,
@@ -32,55 +41,59 @@ const InstructorStatsSection: React.FC<InstructorStatsSectionProps> = ({
     previousStats,
     comparisonLabel
   });
-  // Filter out instructors with no responses or invalid satisfaction scores
-  const validInstructorStats = instructorStats.filter(stat => 
-    stat.response_count > 0 && 
-    typeof stat.avg_satisfaction === 'number' && 
-    Number.isFinite(stat.avg_satisfaction) &&
-    stat.avg_satisfaction > 0
+
+  // Filter out instructors with no useful data
+  const validInstructorStats = instructorStats.filter(stat =>
+    stat && (stat.instructor_id || stat.instructorId) && (stat.instructor_name || stat.instructorName)
   );
 
   // 과정 전체 평균 계산 (현재 차수)
-  const overallAverage = validInstructorStats.length > 0 
-    ? validInstructorStats.reduce((sum, stat) => sum + stat.avg_satisfaction, 0) / validInstructorStats.length 
-    : 0;
-
-  // 과정 전체 평균 계산 (이전 차수)
-  const previousOverallAverage = previousStats.length > 0
-    ? previousStats.reduce((sum, stat) => sum + stat.avg_satisfaction, 0) / previousStats.length
+  const overallAverage = validInstructorStats.length > 0
+    ? validInstructorStats.reduce((sum, stat) => {
+      const val = typeof stat.avg_satisfaction === 'number' ? stat.avg_satisfaction : (stat.avgSatisfaction ?? 0);
+      return sum + (Number.isFinite(val) ? val : 0);
+    }, 0) / validInstructorStats.filter(s => {
+      const val = typeof s.avg_satisfaction === 'number' ? s.avg_satisfaction : (s.avgSatisfaction ?? 0);
+      return Number.isFinite(val) && val > 0;
+    }).length || 1 // Avoid division by zero
     : 0;
 
   // Vertical Bar Chart용 데이터 준비 (현재 차수와 이전 차수 비교 + 전체 평균 라인)
   const verticalChartData = validInstructorStats
     .map((stat) => {
-      const previousStat = previousStats.find(prev => prev.instructor_id === stat.instructor_id);
-      const displayName = stat.instructor_name.length > 6 ? stat.instructor_name.substring(0, 5) + '...' : stat.instructor_name;
-      const current = typeof stat.avg_satisfaction === 'number' && Number.isFinite(stat.avg_satisfaction) && stat.avg_satisfaction > 0
-        ? Number(stat.avg_satisfaction.toFixed(1))
+      const statId = stat.instructor_id || stat.instructorId || '';
+      const previousStat = previousStats.find(prev => (prev.instructor_id || prev.instructorId) === statId);
+      const name = stat.instructor_name || stat.instructorName || 'Unknown';
+      const displayName = name.length > 6 ? name.substring(0, 5) + '...' : name;
+
+      const satisfaction = typeof stat.avg_satisfaction === 'number' ? stat.avg_satisfaction : (stat.avgSatisfaction ?? 0);
+      const prevSatisfaction = previousStat ? (typeof previousStat.avg_satisfaction === 'number' ? previousStat.avg_satisfaction : (previousStat.avgSatisfaction ?? 0)) : 0;
+
+      const current = Number.isFinite(satisfaction) && satisfaction > 0
+        ? Number(satisfaction.toFixed(1))
         : 0;
-      const prev = previousStat && typeof previousStat.avg_satisfaction === 'number' && Number.isFinite(previousStat.avg_satisfaction) && previousStat.avg_satisfaction > 0
-        ? Number(previousStat.avg_satisfaction.toFixed(1))
+      const prev = Number.isFinite(prevSatisfaction) && prevSatisfaction > 0
+        ? Number(prevSatisfaction.toFixed(1))
         : 0;
-      
+
       return {
         name: displayName,
         현재차수: current,
         이전차수: prev,
         과정평균: Number(overallAverage.toFixed(1)),
-        응답수: stat.response_count,
-        설문수: stat.survey_count,
-        full_name: stat.instructor_name,
-        instructor_id: stat.instructor_id
+        응답수: stat.response_count ?? stat.responseCount ?? 0,
+        설문수: stat.survey_count ?? stat.surveyCount ?? 0,
+        full_name: name,
+        instructor_id: statId
       };
     })
     .sort((a, b) => b.현재차수 - a.현재차수);
 
   const hasComparisonData = previousStats.length > 0;
-  
+
   console.log('📊 Chart data preparation:', {
     hasComparisonData,
     validInstructorStatsCount: validInstructorStats.length,
-    previousStatsCount: previousStats.length,
     verticalChartDataSample: verticalChartData.slice(0, 3)
   });
 
@@ -104,35 +117,41 @@ const InstructorStatsSection: React.FC<InstructorStatsSectionProps> = ({
             강사별 만족도 현황 (10점 만점)
           </CardTitle>
           <CardDescription className="text-xs sm:text-sm">
-            {hasComparisonData 
-              ? '현재 차수와 이전 차수의 강사별 만족도를 비교하고, 과정 전체 평균을 확인할 수 있습니다' 
+            {hasComparisonData
+              ? '현재 차수와 이전 차수의 강사별 만족도를 비교하고, 과정 전체 평균을 확인할 수 있습니다'
               : '강사별 만족도 현황과 과정 전체 평균을 세로 막대그래프로 확인할 수 있습니다'
             }
           </CardDescription>
         </CardHeader>
-          <CardContent className="p-2 sm:p-4 md:p-6">
-            {validInstructorStats.length > 0 ? (
-              <ChartErrorBoundary fallbackDescription="강사 통계 차트를 표시하는 중 오류가 발생했습니다.">
+        <CardContent className="p-2 sm:p-4 md:p-6">
+          {validInstructorStats.length > 0 ? (
+            <ChartErrorBoundary fallbackDescription="강사 통계 차트를 표시하는 중 오류가 발생했습니다.">
               <ResponsiveContainer width="100%" height={350}>
-                <ComposedChart 
-                  data={verticalChartData} 
+                <ComposedChart
+                  data={verticalChartData}
                   margin={{ top: 10, right: 10, left: 0, bottom: 50 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    dataKey="name" 
-                    tick={{ fontSize: 10, fill: 'hsl(var(--foreground))' }}
-                    height={60}
+                  <XAxis
+                    dataKey="name"
+                    tick={{
+                      fontSize: isMobile ? 9 : 10,
+                      fill: 'hsl(var(--foreground))',
+                      angle: isMobile ? -45 : 0,
+                      textAnchor: isMobile ? 'end' : 'middle'
+                    }}
+                    height={isMobile ? 80 : 60}
                     interval={0}
                   />
-                  <YAxis 
+                  <YAxis
                     domain={[0, 10]}
                     tick={{ fontSize: 10, fill: 'hsl(var(--foreground))' }}
                     label={{ value: '만족도 (점)', angle: -90, position: 'insideLeft', style: { fontSize: 10 } }}
+                    width={isMobile ? 30 : 40}
                   />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))', 
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
                       border: '1px solid hsl(var(--border))',
                       borderRadius: '8px',
                       fontSize: '11px'
@@ -140,7 +159,7 @@ const InstructorStatsSection: React.FC<InstructorStatsSectionProps> = ({
                     formatter={(value: number, name: string) => {
                       if (name === '과정평균') return [`${value}점`, '과정 전체 평균'];
                       return [
-                        `${value}점`, 
+                        `${value}점`,
                         name === '현재차수' ? '현재 차수' : name === '이전차수' ? comparisonLabel : name
                       ];
                     }}
@@ -151,15 +170,15 @@ const InstructorStatsSection: React.FC<InstructorStatsSectionProps> = ({
                   />
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
                   {hasComparisonData && (
-                    <Bar 
-                      dataKey="이전차수" 
+                    <Bar
+                      dataKey="이전차수"
                       name={comparisonLabel}
-                      fill="hsl(var(--muted-foreground) / 0.4)" 
+                      fill="hsl(var(--muted-foreground) / 0.4)"
                       radius={[4, 4, 0, 0]}
                     />
                   )}
-                  <Bar 
-                    dataKey="현재차수" 
+                  <Bar
+                    dataKey="현재차수"
                     name="현재 차수"
                     fill="hsl(var(--primary))"
                     radius={[4, 4, 0, 0]}
@@ -170,11 +189,11 @@ const InstructorStatsSection: React.FC<InstructorStatsSectionProps> = ({
                     }}
                     cursor="pointer"
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="과정평균" 
+                  <Line
+                    type="monotone"
+                    dataKey="과정평균"
                     name="과정 전체 평균"
-                    stroke="hsl(var(--destructive))" 
+                    stroke="hsl(var(--destructive))"
                     strokeWidth={2}
                     dot={{ fill: 'hsl(var(--destructive))', r: 3, strokeWidth: 2, stroke: 'white' }}
                     activeDot={{ r: 5 }}
@@ -201,34 +220,39 @@ const InstructorStatsSection: React.FC<InstructorStatsSectionProps> = ({
         <CardContent className="p-4 sm:p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {validInstructorStats.map((stat) => {
-              const previousStat = previousStats.find(prev => prev.instructor_id === stat.instructor_id);
-              const hasChange = previousStat && previousStat.avg_satisfaction !== stat.avg_satisfaction;
-              const change = hasChange ? stat.avg_satisfaction - previousStat.avg_satisfaction : 0;
-              
+              const statId = stat.instructor_id || stat.instructorId || '';
+              const previousStat = previousStats.find(prev => (prev.instructor_id || prev.instructorId) === statId);
+
+              const currentVal = typeof stat.avg_satisfaction === 'number' ? stat.avg_satisfaction : (stat.avgSatisfaction ?? 0);
+              const prevVal = previousStat ? (typeof previousStat.avg_satisfaction === 'number' ? previousStat.avg_satisfaction : (previousStat.avgSatisfaction ?? 0)) : 0;
+
+              const hasChange = previousStat && prevVal !== currentVal;
+              const change = hasChange ? currentVal - prevVal : 0;
+
               return (
-                <div 
-                  key={stat.instructor_id}
+                <div
+                  key={statId}
                   className="p-4 rounded-lg border-2 bg-gradient-to-br from-background to-muted/20 hover:shadow-md transition-all cursor-pointer hover:border-primary/50"
-                  onClick={() => onInstructorClick(stat.instructor_id)}
+                  onClick={() => onInstructorClick(statId)}
                 >
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold bg-primary">
-                      {stat.instructor_name.charAt(0)}
+                      {(stat.instructor_name || stat.instructorName || '?').charAt(0)}
                     </div>
                     <div>
-                      <h4 className="font-semibold text-sm">{stat.instructor_name}</h4>
+                      <h4 className="font-semibold text-sm">{stat.instructor_name || stat.instructorName}</h4>
                       <div className="text-xs text-muted-foreground">
                         강사 상세 정보
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">평균 만족도</span>
                       <div className="flex items-center gap-2">
                         <span className="text-lg font-bold text-primary">
-                          {stat.avg_satisfaction > 0 ? stat.avg_satisfaction.toFixed(1) : '-'}점
+                          {Number.isFinite(currentVal) && currentVal > 0 ? currentVal.toFixed(1) : '-'}점
                         </span>
                         {hasChange && (
                           <span className={`text-xs font-medium ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -237,21 +261,21 @@ const InstructorStatsSection: React.FC<InstructorStatsSectionProps> = ({
                         )}
                       </div>
                     </div>
-                    
+
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">설문 수</span>
-                      <span className="font-medium">{stat.survey_count}개</span>
-                    </div>
-                    
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">총 응답 수</span>
-                      <span className="font-medium">{stat.response_count}개</span>
+                      <span className="font-medium">{stat.survey_count ?? stat.surveyCount ?? 0}개</span>
                     </div>
 
-                    {previousStat && previousStat.avg_satisfaction > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">총 응답 수</span>
+                      <span className="font-medium">{stat.response_count ?? stat.responseCount ?? 0}개</span>
+                    </div>
+
+                    {previousStat && prevVal > 0 && (
                       <div className="pt-2 border-t border-border">
                         <div className="text-xs text-muted-foreground">
-                          이전 기간: {previousStat.avg_satisfaction.toFixed(1)}점
+                          이전 기간: {prevVal.toFixed(1)}점
                         </div>
                       </div>
                     )}
