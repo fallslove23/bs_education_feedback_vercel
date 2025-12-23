@@ -26,6 +26,11 @@ BEGIN
     BEGIN v_session_uuid := p_session_id::UUID; EXCEPTION WHEN OTHERS THEN v_session_uuid := NULL; END;
   ELSE v_session_uuid := NULL; END IF;
 
+  -- Treat empty string instructor_id as NULL
+  IF p_instructor_id = '' THEN
+    p_instructor_id := NULL;
+  END IF;
+
   -- Summary statistics
   WITH survey_data AS (
     SELECT 
