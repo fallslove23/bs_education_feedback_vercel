@@ -149,10 +149,6 @@ const SurveyResults = () => {
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
   const [selectedInstructor, setSelectedInstructor] = useState<string>('all');
   const [selectedSurveyId, setSelectedSurveyId] = useState<string | null>(null);
-  const [responses, setResponses] = useState<SurveyResponseRow[]>([]);
-  const [responseTotal, setResponseTotal] = useState(0);
-  const [responsePage, setResponsePage] = useState(0);
-  const [responsesLoading, setResponsesLoading] = useState(false);
   const [downloadJob, setDownloadJob] = useState<DownloadJob | null>(null);
   const [allInstructorsList, setAllInstructorsList] = useState<Array<{ id: string; name: string }>>([]);
   const [instructorNamesCache, setInstructorNamesCache] = useState<Map<string, string>>(new Map());
@@ -160,8 +156,6 @@ const SurveyResults = () => {
 
   /* State for text search filter */
   const [searchTerm, setSearchTerm] = useState('');
-  const [overallQuestionId, setOverallQuestionId] = useState<string | null>(null);
-  const [responseScores, setResponseScores] = useState<Record<string, number | null>>({});
 
   /* ... (search filter effect) ... */
 
@@ -600,130 +594,10 @@ const SurveyResults = () => {
     }
   }, [aggregates, selectedSurveyId]);
 
-  useEffect(() => {
-    if (!selectedSurveyId) return;
-    if (responsePage !== 0) {
-      setResponsePage(0);
-    }
-  }, [selectedSurveyId]);
-
-  useEffect(() => {
-    const fetchResponses = async () => {
-      if (!selectedSurveyId) {
-        setResponses([]);
-        setResponseTotal(0);
-        return;
-      }
-
-      setResponsesLoading(true);
-      try {
-        const from = responsePage * RESPONSES_PAGE_SIZE;
-        const to = from + RESPONSES_PAGE_SIZE - 1;
-
-        let query = supabase
-          .from('survey_responses')
-          .select('id, submitted_at, respondent_email', { count: 'exact' })
-          .eq('survey_id', selectedSurveyId)
-          .order('submitted_at', { ascending: false })
-          .range(from, to);
-
-        query = query.or('is_test.is.null,is_test.eq.false');
-
-        const { data, error, count } = await query;
-
-        if (error) {
-          throw error;
-        }
-
-        setResponses((data ?? []) as SurveyResponseRow[]);
-        setResponseTotal(count ?? data?.length ?? 0);
-      } catch (error) {
-        console.error('Failed to load responses', error);
-        toast({
-          title: '응답 조회 실패',
-          description: '응답 데이터를 불러오는데 실패했습니다.',
-          variant: 'destructive',
-        });
-      } finally {
-        setResponsesLoading(false);
-      }
-    };
-
-    fetchResponses();
-  }, [responsePage, selectedSurveyId, toast]);
-
-  /* Fetch Overall Question ID */
-  useEffect(() => {
-    if (!selectedSurveyId) {
-      setOverallQuestionId(null);
-      setResponseScores({});
-      return;
-    }
-    const fetchQuestion = async () => {
-      // 1. First try: Look for explicit satisfaction_type
-      const { data } = await supabase
-        .from('survey_questions')
-        .select('id')
-        .eq('survey_id', selectedSurveyId)
-        .eq('satisfaction_type', 'overall')
-        .maybeSingle();
-
-      if (data) {
-        setOverallQuestionId(data.id);
-        return;
-      }
-
-      // 2. Fallback: Look for text matching "종합" and "만족"
-      const { data: fallbackData } = await supabase
-        .from('survey_questions')
-        .select('id')
-        .eq('survey_id', selectedSurveyId)
-        .ilike('question_text', '%종합%만족%')
-        .limit(1)
-        .maybeSingle();
-
-      setOverallQuestionId(fallbackData?.id || null);
-    };
-    fetchQuestion();
-  }, [selectedSurveyId]);
-
-  /* Fetch Scores for current page responses */
-  useEffect(() => {
-    const fetchScores = async () => {
-      if (!overallQuestionId || responses.length === 0) return;
-
-      const ids = responses.map(r => r.id);
-      const { data } = await supabase
-        .from('question_answers')
-        .select('response_id, answer_value, answer_text')
-        .eq('question_id', overallQuestionId)
-        .in('response_id', ids);
-
-      if (data) {
-        const scores: Record<string, number | null> = {};
-        data.forEach(row => {
-          let val = row.answer_value;
-          if (val === null && row.answer_text) {
-            const parsed = Number(row.answer_text);
-            if (!Number.isNaN(parsed)) val = parsed;
-          }
-          scores[row.response_id] = typeof val === 'number' ? val : null;
-        });
-        setResponseScores(prev => ({ ...prev, ...scores }));
-      }
-    };
-    fetchScores();
-  }, [responses, overallQuestionId]);
-
   const selectedSurvey = useMemo(
     () => aggregates.find((item) => item.survey_id === selectedSurveyId) ?? null,
     [aggregates, selectedSurveyId],
   );
-
-  const totalResponsePages = useMemo(() => {
-    if (responseTotal === 0) return 0;
-    return Math.ceil(responseTotal / RESPONSES_PAGE_SIZE);
-  }, [responseTotal]);
 
   const handleSurveyChange = (surveyId: string) => {
     setSelectedSurveyId(surveyId);
@@ -1154,6 +1028,16 @@ const SurveyResults = () => {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              {selectedSurvey && (
+                <Button
+                  onClick={() => navigate(`/survey-detailed-analysis/${selectedSurvey.survey_id}`, { state: { from: 'survey-results' } })}
+                  size="sm"
+                  className="w-full sm:w-auto text-xs sm:text-sm bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  <BarIcon className="h-4 w-4 mr-1.5" />
+                  상세 분석 보기
+                </Button>
+              )}
               <Button
                 onClick={() => handleDownload('summary')}
                 disabled={!selectedSurvey || (downloadJob?.status === 'running' && downloadJob.type === 'summary')}
@@ -1166,6 +1050,7 @@ const SurveyResults = () => {
               <Button
                 onClick={() => handleDownload('responses')}
                 disabled={!selectedSurvey || (downloadJob?.status === 'running' && downloadJob.type === 'responses')}
+                variant="outline"
                 size="sm"
                 className="w-full sm:w-auto text-xs sm:text-sm"
               >
@@ -1325,67 +1210,6 @@ const SurveyResults = () => {
                       {downloadJob.message}
                       {downloadJob.status === 'error' && downloadJob.error ? ` (${downloadJob.error})` : ''}
                     </p>
-                  </div>
-                )}
-
-                <div className="rounded-lg border">
-                  <div className="flex items-center justify-between border-b px-3 sm:px-4 py-2">
-                    <p className="text-xs sm:text-sm font-semibold">응답 목록</p>
-                    <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">
-                      총 {formatNumber(responseTotal)}건 · {responsePage + 1}/{totalResponsePages || 1} 페이지
-                    </p>
-                  </div>
-                  {responsesLoading ? (
-                    <div className="py-12 text-center text-muted-foreground">응답을 불러오는 중입니다...</div>
-                  ) : responses.length === 0 ? (
-                    <div className="py-12 text-center text-muted-foreground">응답이 없습니다.</div>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[120px] text-center">종합 만족도</TableHead>
-                          <TableHead className="text-center">제출 시각</TableHead>
-                          <TableHead className="text-center">참여자</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {responses.map((response) => (
-                          <TableRow key={response.id}>
-                            <TableCell className="text-center font-semibold">
-                              {responseScores[response.id] !== undefined && responseScores[response.id] !== null
-                                ? formatSatisfaction(responseScores[response.id])
-                                : '-'}
-                            </TableCell>
-                            <TableCell className="text-center">{new Date(response.submitted_at).toLocaleString('ko-KR')}</TableCell>
-                            <TableCell className="text-center text-muted-foreground">{response.respondent_email ?? '익명'}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </div>
-
-                {totalResponsePages > 1 && (
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      페이지 {responsePage + 1} / {totalResponsePages}
-                    </span>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        disabled={responsePage === 0}
-                        onClick={() => setResponsePage((prev) => Math.max(prev - 1, 0))}
-                      >
-                        이전
-                      </Button>
-                      <Button
-                        variant="outline"
-                        disabled={responsePage + 1 >= totalResponsePages}
-                        onClick={() => setResponsePage((prev) => Math.min(prev + 1, totalResponsePages - 1))}
-                      >
-                        다음
-                      </Button>
-                    </div>
                   </div>
                 )}
               </>
