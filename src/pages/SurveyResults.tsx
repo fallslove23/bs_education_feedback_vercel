@@ -650,13 +650,29 @@ const SurveyResults = () => {
       return;
     }
     const fetchQuestion = async () => {
+      // 1. First try: Look for explicit satisfaction_type
       const { data } = await supabase
         .from('survey_questions')
         .select('id')
         .eq('survey_id', selectedSurveyId)
         .eq('satisfaction_type', 'overall')
         .maybeSingle();
-      setOverallQuestionId(data?.id || null);
+
+      if (data) {
+        setOverallQuestionId(data.id);
+        return;
+      }
+
+      // 2. Fallback: Look for text matching "종합" and "만족"
+      const { data: fallbackData } = await supabase
+        .from('survey_questions')
+        .select('id')
+        .eq('survey_id', selectedSurveyId)
+        .ilike('question_text', '%종합%만족%')
+        .limit(1)
+        .maybeSingle();
+
+      setOverallQuestionId(fallbackData?.id || null);
     };
     fetchQuestion();
   }, [selectedSurveyId]);
@@ -867,6 +883,8 @@ const SurveyResults = () => {
     }
   };
 
+  const detailSectionRef = useRef<HTMLDivElement>(null);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6">
@@ -1032,7 +1050,7 @@ const SurveyResults = () => {
               <div className="py-12 text-center text-muted-foreground">조건에 맞는 설문이 없습니다.</div>
             ) : (
               <div className="rounded-md border overflow-hidden">
-                <div className="max-h-[600px] overflow-auto relative">
+                <div className="max-h-[450px] overflow-auto relative">
                   <Table className="min-w-[1000px] border-separate border-spacing-0">
                     <TableHeader className="sticky top-0 z-20 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/60 shadow-sm">
                       <TableRow className="hover:bg-transparent border-none">
@@ -1055,7 +1073,12 @@ const SurveyResults = () => {
                         <TableRow
                           key={item.survey_id}
                           className={`hover:bg-muted/5 cursor-pointer transition-colors ${item.survey_id === selectedSurveyId ? 'bg-muted/40' : ''}`}
-                          onClick={() => handleSurveyChange(item.survey_id)}
+                          onClick={() => {
+                            handleSurveyChange(item.survey_id);
+                            setTimeout(() => {
+                              detailSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }, 100);
+                          }}
                         >
                           <TableCell className="font-medium border-b">
                             <div className="flex flex-col">
@@ -1112,7 +1135,7 @@ const SurveyResults = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card ref={detailSectionRef}>
           <CardHeader className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between px-4 sm:px-6 py-3 sm:py-4">
             <div>
               <CardTitle className="text-base sm:text-lg mb-1 sm:mb-2">선택한 설문 상세</CardTitle>
