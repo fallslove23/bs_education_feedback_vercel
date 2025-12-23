@@ -5,7 +5,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart } from 'lucide-react';
+import { BarChart as BarIcon, BarChart3, Users, Star, Target } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCourseOptions } from '@/hooks/useCourseOptions';
 import {
@@ -1121,7 +1131,7 @@ const SurveyResults = () => {
                                 navigate(`/survey-detailed-analysis/${item.survey_id}`, { state: { from: 'survey-results' } });
                               }}
                             >
-                              <BarChart className="h-4 w-4 mr-1" />
+                              <BarIcon className="h-4 w-4 mr-1" />
                               분석
                             </Button>
                           </TableCell>
@@ -1170,28 +1180,135 @@ const SurveyResults = () => {
               </div>
             ) : (
               <>
-                <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="rounded-lg border p-3 sm:p-4">
-                    <p className="text-xs sm:text-sm text-muted-foreground mb-1">설문 제목</p>
-                    <p className="text-sm sm:text-base font-semibold truncate">{selectedSurvey.title}</p>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-3 sm:gap-4 grid-cols-2">
+                    <div className="rounded-lg border p-3 sm:p-4 bg-muted/20">
+                      <p className="text-xs sm:text-sm text-muted-foreground mb-1">설문 제목</p>
+                      <p className="text-sm sm:text-base font-semibold truncate" title={selectedSurvey.title}>{selectedSurvey.title}</p>
+                    </div>
+                    <div className="rounded-lg border p-3 sm:p-4 bg-muted/20">
+                      <p className="text-xs sm:text-sm text-muted-foreground mb-1">응답 수</p>
+                      <p className="text-sm sm:text-base font-semibold">{formatNumber(selectedSurvey.response_count)}</p>
+                    </div>
+                    <div className="rounded-lg border p-3 sm:p-4 bg-muted/20">
+                      <p className="text-xs sm:text-sm text-muted-foreground mb-1">기대 인원 대비 응답률</p>
+                      <p className="text-sm sm:text-base font-semibold">
+                        {selectedSurvey.expected_participants && selectedSurvey.expected_participants > 0
+                          ? `${Math.round(
+                            (selectedSurvey.response_count / selectedSurvey.expected_participants) * 100,
+                          )}%`
+                          : '-'}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border p-3 sm:p-4 bg-muted/20">
+                      <p className="text-xs sm:text-sm text-muted-foreground mb-1">강사명</p>
+                      <p className="text-sm sm:text-base font-semibold truncate">
+                        {formatInstructorNames(selectedSurvey.survey_id, selectedSurvey.instructor_name)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="rounded-lg border p-3 sm:p-4">
-                    <p className="text-xs sm:text-sm text-muted-foreground mb-1">응답 수</p>
-                    <p className="text-sm sm:text-base font-semibold">{formatNumber(selectedSurvey.response_count)}</p>
+
+                  <div className="rounded-lg border p-4">
+                    <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4" />
+                      만족도 현황
+                    </h4>
+                    <div className="h-[200px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={[
+                            { name: '종합', value: selectedSurvey.avg_overall_satisfaction || 0, fill: 'hsl(var(--chart-1))' },
+                            { name: '강의', value: selectedSurvey.avg_course_satisfaction || 0, fill: 'hsl(var(--chart-2))' },
+                            { name: '강사', value: calculateAdjustedInstructorSatisfaction() || 0, fill: 'hsl(var(--chart-3))' },
+                            { name: '운영', value: selectedSurvey.avg_operation_satisfaction || 0, fill: 'hsl(var(--chart-4))' },
+                          ]}
+                          layout="vertical"
+                          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                          <XAxis type="number" domain={[0, 10]} hide />
+                          <YAxis dataKey="name" type="category" width={30} tick={{ fontSize: 12 }} />
+                          <Tooltip
+                            cursor={{ fill: 'transparent' }}
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                return (
+                                  <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div className="flex flex-col">
+                                        <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                          {payload[0].payload.name}
+                                        </span>
+                                        <span className="font-bold text-muted-foreground">
+                                          {payload[0].value ? Number(payload[0].value).toFixed(1) : '-'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20} background={{ fill: 'hsl(var(--muted))' }}>
+                            {[
+                              'hsl(var(--chart-1))',
+                              'hsl(var(--chart-2))',
+                              'hsl(var(--chart-3))',
+                              'hsl(var(--chart-4))'
+                            ].map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
+                </div>
+
+                <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4">
                   <div className="rounded-lg border p-3 sm:p-4">
                     <p className="text-xs sm:text-sm text-muted-foreground mb-1">종합 만족도</p>
-                    <p className="text-sm sm:text-base font-semibold">{formatSatisfaction(selectedSurvey.avg_overall_satisfaction)}</p>
+                    <div className="flex items-end gap-2">
+                      <p className="text-xl sm:text-2xl font-bold text-primary">
+                        {formatSatisfaction(selectedSurvey.avg_overall_satisfaction)}
+                      </p>
+                      <span className="text-xs text-muted-foreground mb-1">/ 10</span>
+                    </div>
+                    <Progress value={(selectedSurvey.avg_overall_satisfaction || 0) * 10} className="h-1.5 mt-2" />
                   </div>
                   <div className="rounded-lg border p-3 sm:p-4">
-                    <p className="text-xs sm:text-sm text-muted-foreground mb-1">기대 인원 대비 응답률</p>
-                    <p className="text-sm sm:text-base font-semibold">
-                      {selectedSurvey.expected_participants && selectedSurvey.expected_participants > 0
-                        ? `${Math.round(
-                          (selectedSurvey.response_count / selectedSurvey.expected_participants) * 100,
-                        )}%`
-                        : '-'}
-                    </p>
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-1">강의 만족도</p>
+                    <div className="flex items-end gap-2">
+                      <p className="text-xl sm:text-2xl font-bold">
+                        {formatSatisfaction(selectedSurvey.avg_course_satisfaction)}
+                      </p>
+                      <span className="text-xs text-muted-foreground mb-1">/ 10</span>
+                    </div>
+                    <Progress value={(selectedSurvey.avg_course_satisfaction || 0) * 10} className="h-1.5 mt-2" />
+                  </div>
+                  <div className="rounded-lg border p-3 sm:p-4">
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-1">강사 만족도</p>
+                    <div className="flex items-end gap-2">
+                      <p className="text-xl sm:text-2xl font-bold">
+                        {selectedSurvey.title.includes('[종료 설문]') || selectedSurvey.title.includes('운영')
+                          ? '-'
+                          : formatSatisfaction(calculateAdjustedInstructorSatisfaction())
+                        }
+                      </p>
+                      <span className="text-xs text-muted-foreground mb-1">/ 10</span>
+                    </div>
+                    <Progress value={(calculateAdjustedInstructorSatisfaction() || 0) * 10} className="h-1.5 mt-2" />
+                  </div>
+                  <div className="rounded-lg border p-3 sm:p-4">
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-1">운영 만족도</p>
+                    <div className="flex items-end gap-2">
+                      <p className="text-xl sm:text-2xl font-bold">
+                        {formatSatisfaction(selectedSurvey.avg_operation_satisfaction)}
+                      </p>
+                      <span className="text-xs text-muted-foreground mb-1">/ 10</span>
+                    </div>
+                    <Progress value={(selectedSurvey.avg_operation_satisfaction || 0) * 10} className="h-1.5 mt-2" />
                   </div>
                 </div>
 
