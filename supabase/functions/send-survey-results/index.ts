@@ -515,6 +515,28 @@ const handler = async (req: Request): Promise<Response> => {
       error?: string;
     }
     const recipientDetails: RecipientDetail[] = [];
+    const globalContent = buildContent(null);
+
+    // 1. Insert Initial Log (PENDING) to prevent retry loops on timeout
+    const { data: logEntry, error: logInsertErr } = await supabase.from("email_logs").insert({
+      survey_id: surveyId,
+      user_id: null,
+      recipient_count: emailJobs.length,
+      recipient_details: [], // Empty initially
+      email_subject: globalContent.subject,
+      email_content_snapshot: "Pending execution...",
+      status: 'pending',
+      meta_data: {
+        survey_info: survey,
+        job_start: new Date().toISOString()
+      }
+    }).select().single();
+
+    if (logInsertErr) {
+      console.error("Failed to insert pending log:", logInsertErr);
+      // Proceed mostly, but we lose idempotency protection for this run
+    }
+
     const BATCH_SIZE = 5;
 
     for (let i = 0; i < emailJobs.length; i += BATCH_SIZE) {
@@ -559,22 +581,39 @@ const handler = async (req: Request): Promise<Response> => {
         results.push(r.result);
         recipientDetails.push(r.detail);
       });
+
+      // Optional: Update log periodically for very long jobs (skipped here for simplicity, relying on completion)
     }
 
-    const globalContent = buildContent(null);
+    const finalStatus = results.some(r => r.status === 'failed' || r.status === 'error') ? 'partial_success' : 'success';
 
-    await supabase.from("email_logs").insert({
-      survey_id: surveyId,
-      user_id: null,
-      recipient_count: results.filter(r => r.status === 'sent').length,
-      recipient_details: recipientDetails,
-      email_subject: globalContent.subject,
-      email_content_snapshot: "HTML content generated",
-      status: results.some(r => r.status === 'failed' || r.status === 'error') ? 'partial_success' : 'success',
-      meta_data: {
-        survey_info: survey,
-      }
-    });
+    // 2. Update Log with Final Results
+    if (logEntry?.id) {
+      await supabase.from("email_logs").update({
+        recipient_count: results.filter(r => r.status === 'sent').length,
+        recipient_details: recipientDetails,
+        email_content_snapshot: "HTML content generated", // Keep simple to save DB space
+        status: finalStatus,
+        meta_data: {
+          survey_info: survey,
+          job_complete: new Date().toISOString()
+        }
+      }).eq('id', logEntry.id);
+    } else {
+      // Fallback if initial insert failed
+      await supabase.from("email_logs").insert({
+        survey_id: surveyId,
+        user_id: null,
+        recipient_count: results.filter(r => r.status === 'sent').length,
+        recipient_details: recipientDetails,
+        email_subject: globalContent.subject,
+        email_content_snapshot: "HTML content generated",
+        status: finalStatus,
+        meta_data: {
+          survey_info: survey,
+        }
+      });
+    }
 
     return new Response(
       JSON.stringify({ success: true, results }),

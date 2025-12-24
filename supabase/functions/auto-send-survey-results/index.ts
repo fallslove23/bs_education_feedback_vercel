@@ -58,7 +58,7 @@ serve(async (req) => {
     }
 
     const autoEmailEnabled = settings?.value === "true";
-    
+
     if (!autoEmailEnabled) {
       return new Response(
         JSON.stringify({
@@ -96,7 +96,7 @@ serve(async (req) => {
 
     const now = new Date();
     const nowIso = now.toISOString();
-    
+
     // 이번 달의 시작일 계산 (1일 00:00:00)
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfMonthIso = startOfMonth.toISOString();
@@ -144,7 +144,7 @@ serve(async (req) => {
       failedAttempts: number;
       lastAttempt: Date | null;
     }>();
-    
+
     logs?.forEach((l) => {
       const surveyId = String(l.survey_id);
       let status = surveyLogStatus.get(surveyId);
@@ -152,15 +152,23 @@ serve(async (req) => {
         status = { hasSuccess: false, hasPartial: false, failedAttempts: 0, lastAttempt: null };
         surveyLogStatus.set(surveyId, status);
       }
-      
+
       if (l.status === "success") {
         status.hasSuccess = true;
       } else if (l.status === "partial") {
         status.hasPartial = true;
       } else if (l.status === "failed") {
         status.failedAttempts++;
+      } else if (l.status === "pending") {
+        // If pending, check if it's stale (older than 1 hour)
+        // If recent, treat as active to prevent duplicate runs
+        const pendingTime = new Date(l.created_at).getTime();
+        const oneHourAgo = Date.now() - (60 * 60 * 1000);
+        if (pendingTime > oneHourAgo) {
+          status.hasPartial = true; // Treat as "in progress/done" to skip this run
+        }
       }
-      
+
       const logDate = new Date(l.created_at);
       if (!status.lastAttempt || logDate > status.lastAttempt) {
         status.lastAttempt = logDate;
@@ -180,29 +188,29 @@ serve(async (req) => {
 
     // 4) Filter targets to send - 조용히 필터링 (불필요한 로그 제거)
     const skippedReasons: { surveyId: string; title: string; reason: string }[] = [];
-    
+
     let targets = dueSurveys.filter((s) => {
       const hasResponses = (surveyResponseCounts.get(s.id) || 0) > 0;
       const logStatus = surveyLogStatus.get(s.id);
-      
+
       // 응답이 없으면 조용히 제외
       if (!hasResponses) {
         skippedReasons.push({ surveyId: s.id, title: s.title, reason: 'no_responses' });
         return false;
       }
-      
+
       // 이미 성공/부분 성공 로그가 있으면 조용히 제외 (중복 발송 완전 차단)
       if (logStatus?.hasSuccess || logStatus?.hasPartial) {
         skippedReasons.push({ surveyId: s.id, title: s.title, reason: 'already_sent' });
         return false;
       }
-      
+
       // 최대 재시도 횟수를 초과하면 조용히 제외
       if (logStatus && logStatus.failedAttempts >= MAX_RETRY_COUNT) {
         skippedReasons.push({ surveyId: s.id, title: s.title, reason: 'max_retries_exceeded' });
         return false;
       }
-      
+
       // 마지막 시도 후 1시간 이내면 제외 (rate limiting)
       if (logStatus?.lastAttempt) {
         const timeSinceLastAttempt = Date.now() - logStatus.lastAttempt.getTime();
@@ -212,10 +220,10 @@ serve(async (req) => {
           return false;
         }
       }
-      
+
       return true;
     });
-    
+
     if (limit) targets = targets.slice(0, limit);
 
     if (targets.length === 0) {
@@ -242,13 +250,13 @@ serve(async (req) => {
           const logStatus = surveyLogStatus.get(s.id);
           const attemptNum = (logStatus?.failedAttempts || 0) + 1;
           console.log(`[PROCESSING] Survey ${s.id} (${s.title}), attempt #${attemptNum}/${MAX_RETRY_COUNT}...`);
-          
+
           const r = await invokeSendResults(s.id);
           console.log(`[RESULT] Survey ${s.id}: status=${r.status}, success=${r.status === 200}`);
-          results.push({ 
-            surveyId: s.id, 
-            title: s.title, 
-            status: r.status, 
+          results.push({
+            surveyId: s.id,
+            title: s.title,
+            status: r.status,
             success: r.status === 200,
             attemptNumber: attemptNum
           });
@@ -275,10 +283,10 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         processed: 0,
-        targets: targets.map((t) => ({ 
-          id: t.id, 
-          title: t.title, 
-          status: t.status, 
+        targets: targets.map((t) => ({
+          id: t.id,
+          title: t.title,
+          status: t.status,
           end_date: t.end_date,
           attemptNumber: (surveyLogStatus.get(t.id)?.failedAttempts || 0) + 1
         })),
