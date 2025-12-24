@@ -282,8 +282,8 @@ const DashboardEmailLogs = () => {
 
   const totalStats = {
     totalLogs: filteredLogs.length,
-    successCount: filteredLogs.reduce((acc, log) => acc + (log.status === 'success' ? 1 : 0), 0),
-    failedCount: filteredLogs.reduce((acc, log) => acc + (log.status === 'failed' ? 1 : 0), 0),
+    successCount: filteredLogs.reduce((acc, log) => acc + (log.sent_count || 0), 0),
+    failedCount: filteredLogs.reduce((acc, log) => acc + (log.failed_count || 0), 0),
     duplicateBlocked: filteredLogs.reduce((sum, log) => sum + (log.results?.statistics?.duplicate_blocked || 0), 0)
   };
 
