@@ -61,19 +61,19 @@ const toSafeISOString = (local: string | null) => {
 const buildTitle = (year: number | null, round: number | null, day: number | null, courseName: string | null, isGrouped?: boolean, groupNumber?: number | null, isFinalSurvey?: boolean) => {
   if (!year || !round || !day || !courseName) return "";
   let title = `${year}-${courseName}-${round}차-${day}일차`;
-  
+
   // 분반 설정이 있으면 조 번호 추가 (차수 뒤)
   if (isGrouped && groupNumber) {
     title += ` ${groupNumber}조`;
   }
-  
+
   title += ' 설문';
-  
+
   // 종료 설문이면 태그 추가
   if (isFinalSurvey) {
     title = `[종료 설문] ${title}`;
   }
-  
+
   return title;
 };
 
@@ -87,12 +87,12 @@ type Survey = {
   course_name: string | null; expected_participants: number | null; is_test: boolean | null;
   status: "draft" | "active" | "public" | "completed" | null; created_at: string | null; updated_at: string | null;
   is_final_survey?: boolean | null;
-  
+
   // 분반 관련 필드
   is_grouped?: boolean | null;
   group_type?: string | null;
   group_number?: number | null;
-  
+
   // 운영자 정보 필드
   operator_name?: string | null;
   operator_contact?: string | null;
@@ -141,13 +141,13 @@ export default function SurveyBuilder() {
 
   const [questionDialogOpen, setQuestionDialogOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<SurveyQuestion | null>(null);
-  
+
   // 멀티 셀렉션 상태
   const [selectedQuestions, setSelectedQuestions] = useState<Set<string>>(new Set());
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [bulkActionSection, setBulkActionSection] = useState<string | undefined>();
-  
+
   // 템플릿 선택 관련 상태
   const [templateSelections, setTemplateSelections] = useState<Record<string, string | null>>({});
 
@@ -165,12 +165,12 @@ export default function SurveyBuilder() {
   const [startAt, setStartAt] = useState<string>("");
   const [endAt, setEndAt] = useState<string>("");
   const [description, setDescription] = useState<string>("");
-  
+
   // 운영자 정보 상태
   const [operatorName, setOperatorName] = useState<string>("");
   const [operatorContact, setOperatorContact] = useState<string>("");
 
-  const [courseNames, setCourseNames] = useState<{id: string; name: string}[]>([]);
+  const [courseNames, setCourseNames] = useState<{ id: string; name: string }[]>([]);
   const [courseMgrOpen, setCourseMgrOpen] = useState(false);
   const [newCourseName, setNewCourseName] = useState("");
   const [editRow, setEditRow] = useState<{ id: string; name: string } | null>(null);
@@ -210,11 +210,11 @@ export default function SurveyBuilder() {
       setEducationRound(s.education_round ?? 1);
       setEducationDay(s.education_day ?? 1);
       setCourseName(s.course_name ?? "");
-      
+
       // 운영자 정보 로드
       setOperatorName(s.operator_name ?? "");
       setOperatorContact(s.operator_contact ?? "");
-      
+
       // 분반 정보 로드
       setIsGrouped(s.is_grouped ?? false);
       setGroupType(s.group_type ?? "");
@@ -225,7 +225,7 @@ export default function SurveyBuilder() {
       setEndAt(toLocalDateTime(s.end_date) || endLocal);
       setDescription(
         s.description ??
-          "본 설문은 과목과 강사 만족도를 평가하기 위한 것입니다. 교육 품질 향상을 위해 모든 교육생께서 반드시 참여해 주시길 부탁드립니다."
+        "본 설문은 과목과 강사 만족도를 평가하기 위한 것입니다. 교육 품질 향상을 위해 모든 교육생께서 반드시 참여해 주시길 부탁드립니다."
       );
       console.log('Survey state updated with:', {
         educationYear: s.education_year,
@@ -249,10 +249,10 @@ export default function SurveyBuilder() {
     const { data, error } = await supabase
       .from('survey_questions').select('*').eq('survey_id', surveyId).order('order_index');
     console.log('Questions query result:', { data, error, count: data?.length });
-    if (error) { 
+    if (error) {
       console.error('Questions load error:', error);
-      toast({ title: "질문 로드 실패", description: error.message, variant: "destructive" }); 
-      return; 
+      toast({ title: "질문 로드 실패", description: error.message, variant: "destructive" });
+      return;
     }
     setQuestions((data || []) as any[]);
     console.log('Questions state updated, count:', (data || []).length);
@@ -277,7 +277,7 @@ export default function SurveyBuilder() {
       .eq('survey_id', surveyId)
       .order('session_order');
     if (error) { toast({ title: "세션 로드 실패", description: error.message, variant: "destructive" }); return; }
-    
+
     // subjects 정보를 별도로 조회 (session_id → sessions → session_subjects → subjects)
     if (data && data.length > 0) {
       const sessionIds = data.map(s => s.session_id).filter(Boolean);
@@ -286,7 +286,7 @@ export default function SurveyBuilder() {
           .from('session_subjects')
           .select('session_id, subjects(id, title)')
           .in('session_id', sessionIds);
-        
+
         // subjects 정보를 매핑
         const subjectMap = new Map();
         sessionSubjects?.forEach((ss: any) => {
@@ -294,13 +294,13 @@ export default function SurveyBuilder() {
             subjectMap.set(ss.session_id, ss.subjects);
           }
         });
-        
+
         // data에 subject 정보 추가
         const enrichedData = data.map(session => ({
           ...session,
           subject: session.session_id ? subjectMap.get(session.session_id) : null
         }));
-        
+
         setSessions(enrichedData as any[]);
       } else {
         setSessions(data as any[]);
@@ -310,25 +310,25 @@ export default function SurveyBuilder() {
     }
   }, [surveyId, toast]);
 
-const loadSubjects = useCallback(async (searchTerm?: string) => {
-  let query = (supabase as any)
-    .from('v_subject_options')
-    .select('id,title');
+  const loadSubjects = useCallback(async (searchTerm?: string) => {
+    let query = (supabase as any)
+      .from('v_subject_options')
+      .select('id,title');
 
-  if (searchTerm && searchTerm.trim()) {
-    query = query.ilike('title', `%${searchTerm.trim()}%`);
-  }
+    if (searchTerm && searchTerm.trim()) {
+      query = query.ilike('title', `%${searchTerm.trim()}%`);
+    }
 
-  const { data, error } = await query
-    .order('title', { ascending: true })
-    .range(0, 1999); // 최대 2000개로 상향
-  
-  if (!error && data) {
-    setSubjects(data as any[]);
-  } else if (error) {
-    console.error('Failed to load subjects:', error);
-  }
-}, []);
+    const { data, error } = await query
+      .order('title', { ascending: true })
+      .range(0, 1999); // 최대 2000개로 상향
+
+    if (!error && data) {
+      setSubjects(data as any[]);
+    } else if (error) {
+      console.error('Failed to load subjects:', error);
+    }
+  }, []);
 
   const handleSubjectSearchChange = useCallback((term: string) => {
     loadSubjects(term);
@@ -490,13 +490,13 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
         start_date: toSafeISOString(startAt || startLocal),
         end_date: toSafeISOString(endAt || endLocal),
         description,
-        
+
         // 분반 관련 필드
         is_grouped: isGrouped,
         group_type: isGrouped ? (groupType || null) : null,
         group_number: isGrouped ? (groupNumber ?? null) : null,
         is_final_survey: isFinalSurvey,
-        
+
         // 운영자 정보 필드
         operator_name: operatorName.trim() || null,
         operator_contact: operatorContact.trim() || null,
@@ -522,14 +522,14 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
     toast({ title: "성공", description: "질문이 삭제되었습니다." });
     loadQuestions();
   };
-  
+
   // 멀티 셀렉션 핸들러들
   const handleToggleMultiSelect = () => {
     setIsMultiSelectMode((prev) => !prev);
     setSelectedQuestions(new Set());
     setBulkActionSection(undefined);
   };
-  
+
   const handleSelectQuestion = (questionId: string) => {
     const newSelected = new Set(selectedQuestions);
     if (newSelected.has(questionId)) {
@@ -539,7 +539,7 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
     }
     setSelectedQuestions(newSelected);
   };
-  
+
   const handleSelectAllQuestions = (checked?: boolean | "indeterminate") => {
     const shouldSelectAll =
       typeof checked === "boolean"
@@ -552,7 +552,7 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
       setSelectedQuestions(new Set());
     }
   };
-  
+
   const handleBulkDeleteQuestions = async () => {
     if (selectedQuestions.size === 0) return;
 
@@ -563,9 +563,9 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
         .from('survey_questions')
         .delete()
         .in('id', Array.from(selectedQuestions));
-        
+
       if (error) throw error;
-      
+
       toast({ title: "성공", description: `${selectedQuestions.size}개의 질문이 삭제되었습니다.` });
       setSelectedQuestions(new Set());
       setIsMultiSelectMode(false);
@@ -606,9 +606,8 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
 
       toast({
         title: "이동 완료",
-        description: `${movable.length}개의 질문을 "${targetName}"으로 이동했습니다.${
-          skippedCount > 0 ? ` ${skippedCount}개의 공통 질문은 제외되었습니다.` : ""
-        }`,
+        description: `${movable.length}개의 질문을 "${targetName}"으로 이동했습니다.${skippedCount > 0 ? ` ${skippedCount}개의 공통 질문은 제외되었습니다.` : ""
+          }`,
       });
 
       setBulkActionSection(undefined);
@@ -718,7 +717,7 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
       </div>
     );
   };
-  
+
   const handleQuestionSave = () => { setQuestionDialogOpen(false); loadQuestions(); };
 
   const handleTemplatePreview = (templateId: string) => {
@@ -832,19 +831,19 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
           appliedSessions.push(session?.subject?.title || session?.session_name || '세션');
         }
       }
-      
+
       // 템플릿 적용 후 질문과 섹션 다시 로드
       console.log('Reloading questions and sections after template application');
       await Promise.all([loadQuestions(), loadSections()]);
       console.log('Reload completed');
-      
+
       handleCloseTemplateDialog();
 
       toast({
         title: "템플릿 적용 완료",
         description: `${appliedSessions.length}개 과목에 템플릿이 적용되었습니다.`
       });
-      
+
     } catch (error: any) {
       console.error('Template application error:', error);
       toast({
@@ -901,19 +900,19 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
   };
 
   /* ───────────────────────────── templates CRUD ──────────────────────────── */
-  
+
   // 템플릿 타입 분석 함수
   const analyzeTemplateType = (templateId: string) => {
     const template = templates.find(t => t.id === templateId);
     if (!template) return { type: 'unknown', template: null };
 
     const name = template.name.toLowerCase();
-    
+
     // 강사 평가가 아닌 템플릿
     if (!template.is_course_evaluation) {
       return { type: 'non-instructor', template };
     }
-    
+
     // 강사 평가 템플릿
     if (name.includes('이론') && name.includes('실습')) {
       return { type: 'theory-practice', template }; // 이론+실습 과목
@@ -922,17 +921,17 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
     } else if (name.includes('실습')) {
       return { type: 'practice', template }; // 실습 과목
     }
-    
+
     return { type: 'instructor', template }; // 기본 강사 평가 템플릿
   };
 
   // 세션 분석 함수 - 강사가 같은지 다른지 판단
   const analyzeSessionInstructors = () => {
     if (sessions.length <= 1) return { hasSameInstructor: true, instructorCount: sessions.length };
-    
+
     const instructorIds = sessions.map(s => s.instructor_id).filter(Boolean);
     const uniqueInstructorIds = [...new Set(instructorIds)];
-    
+
     return {
       hasSameInstructor: uniqueInstructorIds.length <= 1,
       instructorCount: uniqueInstructorIds.length,
@@ -945,12 +944,12 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
       toast({ title: "세션 정보 없음", description: "먼저 과목 세션을 추가해주세요.", variant: "destructive" });
       return;
     }
-    
+
     setLoadingTemplate(true);
     try {
       const { type: templateType, template } = analyzeTemplateType(templateId);
       const sessionAnalysis = analyzeSessionInstructors();
-      
+
       // 템플릿 질문과 섹션 가져오기
       const { data: tq } = await supabase
         .from('template_questions').select('*').eq('template_id', templateId).order('order_index');
@@ -983,19 +982,19 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
         // 3. 이론+실습 과목 템플릿 (강사가 같은 경우)
         appliedLogic = '이론+실습 과목 템플릿';
         await applyTheoryPracticeTemplate(tq, ts, sessionAnalysis);
-        
+
       } else {
         // 기본 강사 평가 템플릿 - 세션별 적용
         appliedLogic = '기본 강사 평가 템플릿 (세션별)';
         await applyDefaultInstructorTemplate(tq, ts);
       }
 
-      toast({ 
-        title: "템플릿 적용 완료", 
-        description: `${appliedLogic}이 적용되었습니다. (세션 ${sessions.length}개)` 
+      toast({
+        title: "템플릿 적용 완료",
+        description: `${appliedLogic}이 적용되었습니다. (세션 ${sessions.length}개)`
       });
-      
-      await loadQuestions(); 
+
+      await loadQuestions();
       await loadSections();
     } catch (e: any) {
       console.error('Template application error:', e);
@@ -1043,7 +1042,7 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
           satisfaction_type: q.satisfaction_type ?? null,
           scope: 'session',
         }));
-        
+
         await supabase.from('survey_questions').insert(sessionQuestions);
       }
     }
@@ -1052,8 +1051,8 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
   // 2. 실습 과목 템플릿 적용 (이론과 실습 강사가 다른 경우)
   const applyPracticeTemplate = async (tq: any[], ts: any[], sessionAnalysis: any) => {
     // 실습 세션만 필터링 (세션명에 '실습'이 포함되거나 실습 관련 과목)
-    const practiceSessions = sessions.filter(session => 
-      session.session_name?.toLowerCase().includes('실습') || 
+    const practiceSessions = sessions.filter(session =>
+      session.session_name?.toLowerCase().includes('실습') ||
       session.subject?.title?.toLowerCase().includes('실습')
     );
 
@@ -1061,7 +1060,7 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
 
     for (const session of targetSessions) {
       const sectionMapping: Record<string, string> = {};
-      
+
       if (ts?.length) {
         for (const templateSection of ts) {
           const sectionName = `실습 - ${session.instructor?.name || '강사'} - ${session.subject?.title || session.session_name} - ${templateSection.name}`;
@@ -1093,7 +1092,7 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
           satisfaction_type: q.satisfaction_type ?? null,
           scope: 'session',
         }));
-        
+
         await supabase.from('survey_questions').insert(sessionQuestions);
       }
     }
@@ -1105,7 +1104,7 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
       // 강사가 같은 경우 - 통합 평가
       const firstSession = sessions[0];
       const sectionMapping: Record<string, string> = {};
-      
+
       if (ts?.length) {
         for (const templateSection of ts) {
           const sectionName = `이론+실습 - ${firstSession.instructor?.name || '강사'} - ${templateSection.name}`;
@@ -1137,7 +1136,7 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
           satisfaction_type: q.satisfaction_type ?? null,
           scope: 'operation', // 전체 설문
         }));
-        
+
         await supabase.from('survey_questions').insert(questions);
       }
     } else {
@@ -1149,7 +1148,7 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
   // 4. 강사 평가가 아닌 템플릿 적용
   const applyNonInstructorTemplate = async (tq: any[], ts: any[]) => {
     const sectionMapping: Record<string, string> = {};
-    
+
     // 전체 설문용 섹션 생성
     if (ts?.length) {
       for (const templateSection of ts) {
@@ -1182,7 +1181,7 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
         satisfaction_type: q.satisfaction_type ?? null,
         scope: 'operation', // 전체 설문
       }));
-      
+
       await supabase.from('survey_questions').insert(questions);
     }
   };
@@ -1191,7 +1190,7 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
   const applyDefaultInstructorTemplate = async (tq: any[], ts: any[]) => {
     for (const session of sessions) {
       const sectionMapping: Record<string, string> = {};
-      
+
       if (ts?.length) {
         for (const templateSection of ts) {
           const sectionName = `${session.instructor?.name || '강사'} - ${session.subject?.title || session.session_name} - ${templateSection.name}`;
@@ -1223,7 +1222,7 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
           satisfaction_type: q.satisfaction_type ?? null,
           scope: 'session',
         }));
-        
+
         await supabase.from('survey_questions').insert(sessionQuestions);
       }
     }
@@ -1234,7 +1233,7 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
     try {
       setLoadingTemplate(true);
       console.log('Applying template to session:', { templateId, sessionId });
-      
+
       // 선택된 세션 찾기
       const targetSession = sessions.find(s => s.id === sessionId);
       if (!targetSession) {
@@ -1247,8 +1246,8 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
         .from('survey_questions')
         .select('order_index')
         .eq('survey_id', surveyId!);
-      
-      const maxOrderIndex = allQuestions?.length 
+
+      const maxOrderIndex = allQuestions?.length
         ? Math.max(...allQuestions.map(q => q.order_index || 0))
         : 0;
 
@@ -1270,7 +1269,7 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
       console.log('Template questions:', tq?.length, 'Template sections:', ts?.length);
 
       const sectionMapping: Record<string, string> = {};
-      
+
       // 섹션 생성 (기존 순서 뒤에 추가)
       if (ts?.length) {
         for (const templateSection of ts) {
@@ -1305,25 +1304,25 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
           satisfaction_type: q.satisfaction_type ?? null,
           scope: 'session',
         }));
-        
-        console.log('Inserting questions with order_index range:', 
-          Math.min(...sessionQuestions.map(q => q.order_index)), 
-          'to', 
+
+        console.log('Inserting questions with order_index range:',
+          Math.min(...sessionQuestions.map(q => q.order_index)),
+          'to',
           Math.max(...sessionQuestions.map(q => q.order_index))
         );
-        
+
         const { error } = await supabase.from('survey_questions').insert(sessionQuestions);
         if (error) {
           console.error('Question insert error:', error);
           throw error;
         }
-        
+
         console.log('Successfully inserted', sessionQuestions.length, 'questions');
       }
 
-      toast({ 
-        title: "템플릿 적용 완료", 
-        description: `${targetSession.instructor?.name || '강사'} - ${targetSession.subject?.title || targetSession.session_name}에 템플릿이 적용되었습니다.` 
+      toast({
+        title: "템플릿 적용 완료",
+        description: `${targetSession.instructor?.name || '강사'} - ${targetSession.subject?.title || targetSession.session_name}에 템플릿이 적용되었습니다.`
       });
     } catch (e: any) {
       console.error('Session template application error:', e);
@@ -1536,7 +1535,7 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label>분반 유형</Label>
-                          <select 
+                          <select
                             className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm"
                             value={groupType}
                             onChange={(e) => setGroupType(e.target.value)}
@@ -1598,7 +1597,7 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
             </CardContent>
           </Card>
 
-{/* 🔷 세션(과목/강사) 관리 */}
+          {/* 🔷 세션(과목/강사) 관리 */}
           {survey && (
             <SessionManager
               surveyId={survey.id}
@@ -1631,8 +1630,8 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
                   <Button onClick={handleAddQuestion}>
                     <Plus className="w-4 h-4 mr-2" />질문 추가
                   </Button>
-                  <Button 
-                    variant={isMultiSelectMode ? "default" : "outline"} 
+                  <Button
+                    variant={isMultiSelectMode ? "default" : "outline"}
                     onClick={handleToggleMultiSelect}
                   >
                     {isMultiSelectMode ? (
@@ -1674,8 +1673,8 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
                             questions.length > 0 && selectedQuestions.size === questions.length
                               ? true
                               : selectedQuestions.size > 0
-                              ? "indeterminate"
-                              : false
+                                ? "indeterminate"
+                                : false
                           }
                           onCheckedChange={(checked) => handleSelectAllQuestions(checked)}
                         />
@@ -1775,8 +1774,8 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
                 <div className="space-y-6">
                   {/* 세션별로 그룹화하여 표시 */}
                   {sessions.map((session) => {
-                    const sessionQuestions = questions.filter(q => 
-                      q.scope === 'session' && 
+                    const sessionQuestions = questions.filter(q =>
+                      q.scope === 'session' &&
                       (q as any).session_id === session.id
                     );
                     const sessionSections = sections.filter(s =>
@@ -1785,9 +1784,9 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
                     const unsectionKey = `unsection-${session.id}`;
                     const unsectionedQuestions = sessionQuestions.filter((q) => !q.section_id);
                     const unsectionCollapsed = !!isSectionCollapsed(unsectionKey);
-                    
+
                     if (sessionQuestions.length === 0) return null;
-                    
+
                     return (
                       <div
                         key={session.id}
@@ -1889,7 +1888,7 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
                       </div>
                     );
                   })}
-                  
+
                   {/* 공통 질문들 (scope: operation) */}
                   {(() => {
                     const operationQuestions = questions.filter((q) => q.scope === "operation");
@@ -2027,7 +2026,7 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
                                     )}
                                   >
                                     <div className="font-medium">
-                                      {session.subject?.title || session.session_name}
+                                      {session.subject?.title || session.session_name || "세션명 없음"}
                                     </div>
                                     <div className="mt-1 text-xs text-muted-foreground">
                                       강사: {session.instructor?.name || "미정"}
@@ -2042,7 +2041,7 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
                             {activeSession && (
                               <div className="rounded-lg border border-dashed bg-muted/50 p-3 text-xs text-muted-foreground">
                                 <div className="font-medium text-foreground">
-                                  {activeSession.subject?.title || activeSession.session_name}
+                                  {activeSession.subject?.title || activeSession.session_name || "세션명 없음"}
                                 </div>
                                 <div className="mt-1 flex items-center justify-between">
                                   <span>
@@ -2149,7 +2148,7 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
                                         {isAssignedToActive
                                           ? "선택 완료"
                                           : activeSession
-                                            ? `${activeSession.subject?.title || activeSession.session_name}에 적용`
+                                            ? `${activeSession.subject?.title || activeSession.session_name || "선택된 세션"}에 적용`
                                             : "세션을 선택하세요"}
                                       </Button>
                                     </CardFooter>
@@ -2377,12 +2376,12 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
                 <div className="space-y-2">
                   <Label htmlFor="section-name">섹션 이름</Label>
                   <Input id="section-name" value={sectionForm.name}
-                        onChange={(e) => setSectionForm(prev => ({ ...prev, name: e.target.value }))} placeholder="섹션 이름을 입력하세요" />
+                    onChange={(e) => setSectionForm(prev => ({ ...prev, name: e.target.value }))} placeholder="섹션 이름을 입력하세요" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="section-description">설명 (선택사항)</Label>
                   <Textarea id="section-description" rows={3} value={sectionForm.description}
-                            onChange={(e) => setSectionForm(prev => ({ ...prev, description: e.target.value }))} placeholder="섹션 설명을 입력하세요" />
+                    onChange={(e) => setSectionForm(prev => ({ ...prev, description: e.target.value }))} placeholder="섹션 설명을 입력하세요" />
                 </div>
               </div>
               <DialogFooter>
@@ -2402,8 +2401,8 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
 
               <div className="flex gap-2">
                 <Input placeholder="새 과정명 입력" value={newCourseName}
-                      onChange={(e) => setNewCourseName(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleCreateCourseName()} />
+                  onChange={(e) => setNewCourseName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleCreateCourseName()} />
                 <Button onClick={handleCreateCourseName}><Plus className="w-4 h-4 mr-1" />추가</Button>
               </div>
 
@@ -2419,8 +2418,8 @@ const loadSubjects = useCallback(async (searchTerm?: string) => {
                       <div key={c.id} className="flex items-center justify-between gap-3 border rounded-md p-2">
                         {isEditing ? (
                           <Input value={editRow!.name}
-                                onChange={(e) => setEditRow({ ...editRow!, name: e.target.value })}
-                                onKeyDown={(e) => { if (e.key === "Enter") handleRenameCourseName(); if (e.key === "Escape") setEditRow(null); }} />
+                            onChange={(e) => setEditRow({ ...editRow!, name: e.target.value })}
+                            onKeyDown={(e) => { if (e.key === "Enter") handleRenameCourseName(); if (e.key === "Escape") setEditRow(null); }} />
                         ) : (<div className="font-medium">{c.name}</div>)}
                         <div className="flex gap-2">
                           {isEditing ? (

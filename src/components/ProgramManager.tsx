@@ -28,7 +28,7 @@ export default function ProgramManager({ selectedProgram, onProgramSelect }: Pro
   const [loading, setLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
-  
+
   const [form, setForm] = useState({
     name: "",
     description: ""
@@ -59,7 +59,7 @@ export default function ProgramManager({ selectedProgram, onProgramSelect }: Pro
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!form.name.trim()) {
       toast({
         title: "오류",
@@ -115,7 +115,7 @@ export default function ProgramManager({ selectedProgram, onProgramSelect }: Pro
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("이 과정을 삭제하시겠습니까? 관련된 설문/데이터에 영향을 줄 수 있습니다.")) return;
+    if (!confirm("정말 이 과정을 삭제하시겠습니까?\n\n주의: 이 과정과 연결된 모든 세션(회차) 데이터가 영구적으로 삭제됩니다.\n삭제 후에는 복구할 수 없습니다.")) return;
 
     try {
       const { error } = await supabase
@@ -124,7 +124,7 @@ export default function ProgramManager({ selectedProgram, onProgramSelect }: Pro
         .eq('id', id);
 
       if (error) throw error;
-      
+
       toast({ title: "성공", description: "과정이 삭제되었습니다." });
       fetchPrograms();
     } catch (error: any) {
@@ -157,7 +157,7 @@ export default function ProgramManager({ selectedProgram, onProgramSelect }: Pro
             emptyText="검색 결과가 없습니다."
             className="flex-1"
           />
-          
+
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" onClick={handleNewProgram}>
@@ -170,7 +170,7 @@ export default function ProgramManager({ selectedProgram, onProgramSelect }: Pro
                   {editingProgram ? "과정 수정" : "새 과정 추가"}
                 </DialogTitle>
               </DialogHeader>
-              
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <Label>과정명</Label>
@@ -189,9 +189,9 @@ export default function ProgramManager({ selectedProgram, onProgramSelect }: Pro
                   />
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
                     onClick={() => setIsDialogOpen(false)}
                   >
                     취소
